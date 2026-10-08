@@ -10,9 +10,8 @@
                 <ui:ScrollView name="question-list" class="question-list" />
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="cue-tray" class="cue-tray">
-            <ui:Label text="Cues" class="panel-title cue-tray-title" />
-            <ui:ScrollView name="cue-list" class="cue-list" mode="Horizontal" />
+        <ui:VisualElement name="cue-bar" class="cue-bar">
+            <ui:Button name="cue-inventory-button" text="Cues (0)" class="cue-inventory-button" />
         </ui:VisualElement>
         <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
             <ui:VisualElement class="dialogue-header">
@@ -27,6 +26,15 @@
                 <ui:ScrollView name="folder-content" class="folder-content" />
             </ui:VisualElement>
             <ui:Button name="folder-tab" text="File" class="folder-tab" />
+        </ui:VisualElement>
+        <ui:VisualElement name="cue-overlay" class="cue-overlay">
+            <ui:VisualElement name="cue-window" class="cue-window">
+                <ui:VisualElement class="cue-window-header">
+                    <ui:Label text="Cue Cards" class="panel-title" />
+                    <ui:Button name="cue-close-button" text="X" class="cue-close-button" />
+                </ui:VisualElement>
+                <ui:ScrollView name="cue-list" class="cue-list" />
+            </ui:VisualElement>
         </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

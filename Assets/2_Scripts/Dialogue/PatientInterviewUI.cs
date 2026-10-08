@@ -25,6 +25,9 @@ public class PatientInterviewUI : MonoBehaviour
     VisualElement patientFolder;
     VisualElement folderContent;
     Button folderTab;
+    VisualElement cueOverlay;
+    Button cueInventoryButton;
+    Button cueCloseButton;
     bool questionsEnabled = true;
     readonly HashSet<string> foundHotspotIds = new HashSet<string>();
 
@@ -57,6 +60,19 @@ public class PatientInterviewUI : MonoBehaviour
         RebuildHotspots(patient != null ? patient.visualHotspots : null);
         patientFolder?.RemoveFromClassList("patient-folder--open");
         BuildFolder(patient);
+        SetCueInventoryOpen(false);
+    }
+
+    void OpenCueInventory() => SetCueInventoryOpen(true);
+
+    void CloseCueInventory() => SetCueInventoryOpen(false);
+
+    void SetCueInventoryOpen(bool open)
+    {
+        if (cueOverlay != null)
+        {
+            cueOverlay.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
+        }
     }
 
     void ToggleFolder()
@@ -154,8 +170,17 @@ public class PatientInterviewUI : MonoBehaviour
         }
 
         cueList.Clear();
-        if (cues == null)
+        int count = cues != null ? cues.Count : 0;
+        if (cueInventoryButton != null)
         {
+            cueInventoryButton.text = $"Cues ({count})";
+        }
+
+        if (count == 0)
+        {
+            Label empty = new Label("No cue cards collected yet.");
+            empty.AddToClassList("cue-empty");
+            cueList.Add(empty);
             return;
         }
 
@@ -377,7 +402,12 @@ public class PatientInterviewUI : MonoBehaviour
         if (cueList != null)
         {
             cueList.style.flexDirection = FlexDirection.Row;
+            cueList.style.flexWrap = Wrap.Wrap;
         }
+
+        cueOverlay = bindRoot.Q<VisualElement>("cue-overlay");
+        cueInventoryButton = bindRoot.Q<Button>("cue-inventory-button");
+        cueCloseButton = bindRoot.Q<Button>("cue-close-button");
 
         doneButton = bindRoot.Q<Button>("done-button");
         dialoguePanel = bindRoot.Q<VisualElement>("dialogue-panel");
@@ -395,6 +425,18 @@ public class PatientInterviewUI : MonoBehaviour
         {
             folderTab.clicked += ToggleFolder;
         }
+
+        if (cueInventoryButton != null)
+        {
+            cueInventoryButton.clicked += OpenCueInventory;
+        }
+
+        if (cueCloseButton != null)
+        {
+            cueCloseButton.clicked += CloseCueInventory;
+        }
+
+        SetCueInventoryOpen(false);
 
         if (dialoguePanel != null)
         {
@@ -419,6 +461,16 @@ public class PatientInterviewUI : MonoBehaviour
             folderTab.clicked -= ToggleFolder;
         }
 
+        if (cueInventoryButton != null)
+        {
+            cueInventoryButton.clicked -= OpenCueInventory;
+        }
+
+        if (cueCloseButton != null)
+        {
+            cueCloseButton.clicked -= CloseCueInventory;
+        }
+
         if (dialoguePanel != null)
         {
             dialoguePanel.UnregisterCallback<PointerDownEvent>(HandleDialoguePointerDown);
@@ -441,6 +493,9 @@ public class PatientInterviewUI : MonoBehaviour
         patientFolder = null;
         folderContent = null;
         folderTab = null;
+        cueOverlay = null;
+        cueInventoryButton = null;
+        cueCloseButton = null;
     }
 
     void HandleDoneClicked()
