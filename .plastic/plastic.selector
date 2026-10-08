@@ -1,0 +1,3 @@
+repository "NurseTraining/NurseTraining@7971742047113@cloud"
+  path "/"
+    smartbranch "/main/2nd stage of clinical judgement"

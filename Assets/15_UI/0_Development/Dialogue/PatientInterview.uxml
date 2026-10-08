@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="PatientInterview.uss" />
+    <ui:VisualElement name="patient-interview" class="patient-interview">
+        <ui:VisualElement name="upper-row" class="upper-row">
+            <ui:VisualElement name="portrait-frame" class="portrait-frame">
+                <ui:VisualElement name="portrait" class="portrait" />
+            </ui:VisualElement>
+            <ui:VisualElement name="question-panel" class="question-panel">
+                <ui:Label text="Questions" class="panel-title" />
+                <ui:ScrollView name="question-list" class="question-list" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="cue-tray" class="cue-tray">
+            <ui:Label text="Cues" class="panel-title cue-tray-title" />
+            <ui:ScrollView name="cue-list" class="cue-list" mode="Horizontal" />
+        </ui:VisualElement>
+        <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
+            <ui:VisualElement class="dialogue-header">
+                <ui:Label name="speaker-name" text="Patient" class="speaker-name" />
+                <ui:Button name="done-button" text="Done" class="done-button" />
+            </ui:VisualElement>
+            <ui:Label name="dialogue-text" text="" class="dialogue-text" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
