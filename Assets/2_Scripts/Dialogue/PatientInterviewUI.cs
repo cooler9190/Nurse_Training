@@ -8,8 +8,11 @@ public class PatientInterviewUI : MonoBehaviour
 {
     public event Action<string> OnQuestionClicked;
     public event Action<string> OnHotspotClicked;
+    public event Action<AbcdeLetter> OnAbcdeClicked;
     public event Action OnDoneClicked;
     public event Action OnSkipRequested;
+
+    const int AbcdeCount = 5;
 
     UIDocument document;
     VisualElement root;
@@ -28,8 +31,20 @@ public class PatientInterviewUI : MonoBehaviour
     VisualElement cueOverlay;
     Button cueInventoryButton;
     Button cueCloseButton;
+    VisualElement abcdeBar;
+    readonly Button[] abcdeButtons = new Button[AbcdeCount];
+    readonly Action[] abcdeHandlers = new Action[AbcdeCount];
     bool questionsEnabled = true;
     readonly HashSet<string> foundHotspotIds = new HashSet<string>();
+
+    void Awake()
+    {
+        for (int i = 0; i < AbcdeCount; i++)
+        {
+            AbcdeLetter letter = (AbcdeLetter)i;
+            abcdeHandlers[i] = () => OnAbcdeClicked?.Invoke(letter);
+        }
+    }
 
     void OnEnable()
     {
@@ -61,6 +76,25 @@ public class PatientInterviewUI : MonoBehaviour
         patientFolder?.RemoveFromClassList("patient-folder--open");
         BuildFolder(patient);
         SetCueInventoryOpen(false);
+
+        for (int i = 0; i < AbcdeCount; i++)
+        {
+            if (abcdeButtons[i] != null)
+            {
+                abcdeButtons[i].RemoveFromClassList("abcde-button--examined");
+                abcdeButtons[i].SetEnabled(true);
+            }
+        }
+    }
+
+    public void SetAbcdeExamined(AbcdeLetter letter)
+    {
+        Button button = abcdeButtons[(int)letter];
+        if (button != null)
+        {
+            button.AddToClassList("abcde-button--examined");
+            button.SetEnabled(false);
+        }
     }
 
     void OpenCueInventory() => SetCueInventoryOpen(true);
@@ -227,6 +261,11 @@ public class PatientInterviewUI : MonoBehaviour
         if (questionList != null)
         {
             questionList.SetEnabled(enabled);
+        }
+
+        if (abcdeBar != null)
+        {
+            abcdeBar.SetEnabled(enabled);
         }
     }
 
@@ -409,6 +448,16 @@ public class PatientInterviewUI : MonoBehaviour
         cueInventoryButton = bindRoot.Q<Button>("cue-inventory-button");
         cueCloseButton = bindRoot.Q<Button>("cue-close-button");
 
+        abcdeBar = bindRoot.Q<VisualElement>("abcde-bar");
+        for (int i = 0; i < AbcdeCount; i++)
+        {
+            abcdeButtons[i] = bindRoot.Q<Button>($"abcde-{i}");
+            if (abcdeButtons[i] != null)
+            {
+                abcdeButtons[i].clicked += abcdeHandlers[i];
+            }
+        }
+
         doneButton = bindRoot.Q<Button>("done-button");
         dialoguePanel = bindRoot.Q<VisualElement>("dialogue-panel");
         patientFolder = bindRoot.Q<VisualElement>("patient-folder");
@@ -470,6 +519,17 @@ public class PatientInterviewUI : MonoBehaviour
         {
             cueCloseButton.clicked -= CloseCueInventory;
         }
+
+        for (int i = 0; i < AbcdeCount; i++)
+        {
+            if (abcdeButtons[i] != null)
+            {
+                abcdeButtons[i].clicked -= abcdeHandlers[i];
+                abcdeButtons[i] = null;
+            }
+        }
+
+        abcdeBar = null;
 
         if (dialoguePanel != null)
         {

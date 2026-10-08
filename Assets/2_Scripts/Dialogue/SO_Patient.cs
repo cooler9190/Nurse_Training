@@ -12,6 +12,26 @@ public class SO_Patient : ScriptableObject
     public PatientChart chart = new PatientChart();
     public List<InterviewQuestion> questions = new List<InterviewQuestion>();
     public List<VisualHotspot> visualHotspots = new List<VisualHotspot>();
+    public List<AbcdeFinding> abcdeFindings = new List<AbcdeFinding>();
+
+    public AbcdeFinding FindAbcdeFinding(AbcdeLetter letter)
+    {
+        if (abcdeFindings == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < abcdeFindings.Count; i++)
+        {
+            AbcdeFinding finding = abcdeFindings[i];
+            if (finding != null && finding.letter == letter)
+            {
+                return finding;
+            }
+        }
+
+        return null;
+    }
 
     public InterviewQuestion FindQuestion(string id)
     {
@@ -126,6 +146,35 @@ public class InterviewQuestion
         string resolvedId = string.IsNullOrWhiteSpace(cueId) ? id : cueId.Trim();
         string resolvedTitle = string.IsNullOrWhiteSpace(cueTitle) ? resolvedId : cueTitle.Trim();
         return new RecognizedCue(resolvedId, resolvedTitle, cueDescription ?? string.Empty, CueOrigin.Question);
+    }
+}
+
+public enum AbcdeLetter
+{
+    Airway,
+    Breathing,
+    Circulation,
+    Disability,
+    Exposure
+}
+
+[Serializable]
+public class AbcdeFinding
+{
+    public AbcdeLetter letter;
+    [TextArea(2, 6)]
+    public string findingText;
+    public bool awardsCue;
+    public string cueId;
+    public string cueTitle;
+    [TextArea(1, 3)]
+    public string cueDescription;
+
+    public RecognizedCue ToCue()
+    {
+        string resolvedId = string.IsNullOrWhiteSpace(cueId) ? $"abcde-{letter.ToString().ToLowerInvariant()}" : cueId.Trim();
+        string resolvedTitle = string.IsNullOrWhiteSpace(cueTitle) ? letter.ToString() : cueTitle.Trim();
+        return new RecognizedCue(resolvedId, resolvedTitle, cueDescription ?? string.Empty, CueOrigin.Examination);
     }
 }
 
