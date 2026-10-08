@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 1000000005}
   - component: {fileID: 1000000006}
   m_Layer: 5
-  m_Name: PatientInterview
+  m_Name: PatientExamination
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
