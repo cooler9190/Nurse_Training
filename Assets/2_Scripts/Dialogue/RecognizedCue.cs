@@ -1,7 +1,8 @@
 public enum CueOrigin
 {
     Question,
-    Visual
+    Visual,
+    Examination
 }
 
 public readonly struct RecognizedCue

@@ -19,6 +19,7 @@ public class PatientInterviewController : MonoBehaviour
     SO_Patient interview;
     readonly HashSet<string> askedIds = new HashSet<string>();
     readonly HashSet<string> unlockedIds = new HashSet<string>();
+    readonly bool[] examined = new bool[5];
     bool isPlaying;
     bool isBusy;
     bool skipRequested;
@@ -68,6 +69,7 @@ public class PatientInterviewController : MonoBehaviour
         interview = interviewAsset;
         askedIds.Clear();
         unlockedIds.Clear();
+        Array.Clear(examined, 0, examined.Length);
         warnedMissingVoice = false;
         isPlaying = true;
         isBusy = false;
@@ -124,12 +126,14 @@ public class PatientInterviewController : MonoBehaviour
         if (subscribe)
         {
             interviewUI.OnQuestionClicked += HandleQuestionClicked;
+            interviewUI.OnAbcdeClicked += HandleAbcdeClicked;
             interviewUI.OnDoneClicked += EndInterview;
             interviewUI.OnSkipRequested += HandleSkipRequested;
         }
         else
         {
             interviewUI.OnQuestionClicked -= HandleQuestionClicked;
+            interviewUI.OnAbcdeClicked -= HandleAbcdeClicked;
             interviewUI.OnDoneClicked -= EndInterview;
             interviewUI.OnSkipRequested -= HandleSkipRequested;
         }
@@ -188,11 +192,50 @@ public class PatientInterviewController : MonoBehaviour
         RefreshQuestions();
     }
 
-    IEnumerator TypePatientLine(string line)
+    void HandleAbcdeClicked(AbcdeLetter letter)
+    {
+        if (!isPlaying || isBusy || examined[(int)letter])
+        {
+            return;
+        }
+
+        examined[(int)letter] = true;
+        StartCoroutine(PlayExamination(letter));
+    }
+
+    IEnumerator PlayExamination(AbcdeLetter letter)
+    {
+        isBusy = true;
+        skipRequested = false;
+        interviewUI.SetQuestionsEnabled(false);
+
+        AbcdeFinding finding = interview.FindAbcdeFinding(letter);
+        string text = finding != null && !string.IsNullOrWhiteSpace(finding.findingText)
+            ? finding.findingText
+            : "No abnormal findings.";
+
+        string letterName = letter.ToString();
+        interviewUI.SetSpeakerName($"{letterName[0]} - {letterName}");
+        yield return TypePatientLine(text, false);
+
+        if (finding != null && finding.awardsCue)
+        {
+            OnCueRecognized?.Invoke(finding.ToCue());
+        }
+
+        interviewUI.SetAbcdeExamined(letter);
+        isBusy = false;
+        interviewUI.SetQuestionsEnabled(true);
+    }
+
+    IEnumerator TypePatientLine(string line, bool playVoice = true)
     {
         string text = line ?? string.Empty;
         interviewUI.SetDialogueText(string.Empty);
-        StartPatientVoice();
+        if (playVoice)
+        {
+            StartPatientVoice();
+        }
 
         for (int i = 0; i < text.Length; i++)
         {

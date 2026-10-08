@@ -92,8 +92,36 @@
 
 .cue-bar {
     flex-direction: row;
-    justify-content: flex-start;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 12px;
+}
+
+.abcde-bar {
+    flex-direction: row;
+}
+
+.abcde-button {
+    width: 44px;
+    height: 44px;
+    margin: 0 0 0 8px;
+    padding: 0;
+    background-color: rgb(18, 72, 92);
+    color: rgb(245, 250, 252);
+    font-size: 18px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.abcde-button:hover {
+    background-color: rgb(30, 96, 120);
+}
+
+.abcde-button--examined {
+    background-color: rgb(90, 112, 124);
+    color: rgb(210, 220, 226);
 }
 
 .cue-inventory-button {

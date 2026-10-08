@@ -12,6 +12,13 @@
         </ui:VisualElement>
         <ui:VisualElement name="cue-bar" class="cue-bar">
             <ui:Button name="cue-inventory-button" text="Cues (0)" class="cue-inventory-button" />
+            <ui:VisualElement name="abcde-bar" class="abcde-bar">
+                <ui:Button name="abcde-0" text="A" class="abcde-button" />
+                <ui:Button name="abcde-1" text="B" class="abcde-button" />
+                <ui:Button name="abcde-2" text="C" class="abcde-button" />
+                <ui:Button name="abcde-3" text="D" class="abcde-button" />
+                <ui:Button name="abcde-4" text="E" class="abcde-button" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
             <ui:VisualElement class="dialogue-header">
