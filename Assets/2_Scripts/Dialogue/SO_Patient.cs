@@ -9,6 +9,7 @@ public class SO_Patient : ScriptableObject
     public string patientDisplayName = "Patient";
     public Sprite patientPortrait;
     public EventReference patientDialogueEvent;
+    public PatientChart chart = new PatientChart();
     public List<InterviewQuestion> questions = new List<InterviewQuestion>();
     public List<VisualHotspot> visualHotspots = new List<VisualHotspot>();
 
@@ -81,6 +82,27 @@ public class SO_Patient : ScriptableObject
         }
     }
 #endif
+}
+
+public enum PatientGender
+{
+    Female,
+    Male,
+    Other
+}
+
+[Serializable]
+public class PatientChart
+{
+    public int age;
+    public PatientGender gender;
+    public float weightKg;
+    public float heightCm;
+    public bool hasPacemaker;
+    public List<string> allergies = new List<string>();
+    [Tooltip("Other specifics shown in the patient file, e.g. \"Type 2 diabetes\" or \"Hard of hearing\".")]
+    [TextArea(1, 3)]
+    public List<string> notes = new List<string>();
 }
 
 [Serializable]

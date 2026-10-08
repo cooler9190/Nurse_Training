@@ -21,5 +21,12 @@
             </ui:VisualElement>
             <ui:Label name="dialogue-text" text="" class="dialogue-text" />
         </ui:VisualElement>
+        <ui:VisualElement name="patient-folder" class="patient-folder">
+            <ui:VisualElement name="folder-panel" class="folder-panel">
+                <ui:Label text="Patient File" class="panel-title" />
+                <ui:ScrollView name="folder-content" class="folder-content" />
+            </ui:VisualElement>
+            <ui:Button name="folder-tab" text="File" class="folder-tab" />
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>
