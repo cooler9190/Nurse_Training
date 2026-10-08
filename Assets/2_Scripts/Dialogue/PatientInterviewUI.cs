@@ -22,6 +22,9 @@ public class PatientInterviewUI : MonoBehaviour
     VisualElement cueList;
     Button doneButton;
     VisualElement dialoguePanel;
+    VisualElement patientFolder;
+    VisualElement folderContent;
+    Button folderTab;
     bool questionsEnabled = true;
     readonly HashSet<string> foundHotspotIds = new HashSet<string>();
 
@@ -52,6 +55,79 @@ public class PatientInterviewUI : MonoBehaviour
         foundHotspotIds.Clear();
         ApplyPortrait(patient != null ? patient.patientPortrait : null);
         RebuildHotspots(patient != null ? patient.visualHotspots : null);
+        patientFolder?.RemoveFromClassList("patient-folder--open");
+        BuildFolder(patient);
+    }
+
+    void ToggleFolder()
+    {
+        patientFolder?.ToggleInClassList("patient-folder--open");
+    }
+
+    void BuildFolder(SO_Patient patient)
+    {
+        if (folderContent == null)
+        {
+            return;
+        }
+
+        folderContent.Clear();
+        if (patient == null)
+        {
+            return;
+        }
+
+        PatientChart chart = patient.chart ?? new PatientChart();
+        AddFolderRow("Name", patient.patientDisplayName);
+        AddFolderRow("Age", $"{chart.age} years");
+        AddFolderRow("Gender", chart.gender.ToString());
+        AddFolderRow("Weight", $"{chart.weightKg:0.#} kg");
+        AddFolderRow("Height", $"{chart.heightCm:0.#} cm");
+        AddFolderRow("Pacemaker", chart.hasPacemaker ? "Yes" : "No", chart.hasPacemaker);
+
+        bool hasAllergies = chart.allergies != null && chart.allergies.Count > 0;
+        AddFolderRow("Allergies", hasAllergies ? string.Join(", ", chart.allergies) : "None known", hasAllergies);
+
+        if (chart.notes == null || chart.notes.Count == 0)
+        {
+            return;
+        }
+
+        Label notesTitle = new Label("Notes");
+        notesTitle.AddToClassList("folder-section-title");
+        folderContent.Add(notesTitle);
+
+        for (int i = 0; i < chart.notes.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(chart.notes[i]))
+            {
+                continue;
+            }
+
+            Label note = new Label($"- {chart.notes[i].Trim()}");
+            note.AddToClassList("folder-note");
+            folderContent.Add(note);
+        }
+    }
+
+    void AddFolderRow(string label, string value, bool alert = false)
+    {
+        VisualElement row = new VisualElement();
+        row.AddToClassList("folder-row");
+
+        Label labelElement = new Label(label);
+        labelElement.AddToClassList("folder-label");
+        row.Add(labelElement);
+
+        Label valueElement = new Label(value ?? string.Empty);
+        valueElement.AddToClassList("folder-value");
+        if (alert)
+        {
+            valueElement.AddToClassList("folder-value--alert");
+        }
+
+        row.Add(valueElement);
+        folderContent.Add(row);
     }
 
     public void MarkHotspotFound(string hotspotId)
@@ -305,10 +381,19 @@ public class PatientInterviewUI : MonoBehaviour
 
         doneButton = bindRoot.Q<Button>("done-button");
         dialoguePanel = bindRoot.Q<VisualElement>("dialogue-panel");
+        patientFolder = bindRoot.Q<VisualElement>("patient-folder");
+        ScrollView folderScroll = bindRoot.Q<ScrollView>("folder-content");
+        folderContent = folderScroll != null ? folderScroll.contentContainer : null;
+        folderTab = bindRoot.Q<Button>("folder-tab");
 
         if (doneButton != null)
         {
             doneButton.clicked += HandleDoneClicked;
+        }
+
+        if (folderTab != null)
+        {
+            folderTab.clicked += ToggleFolder;
         }
 
         if (dialoguePanel != null)
@@ -327,6 +412,11 @@ public class PatientInterviewUI : MonoBehaviour
         if (doneButton != null)
         {
             doneButton.clicked -= HandleDoneClicked;
+        }
+
+        if (folderTab != null)
+        {
+            folderTab.clicked -= ToggleFolder;
         }
 
         if (dialoguePanel != null)
@@ -348,6 +438,9 @@ public class PatientInterviewUI : MonoBehaviour
         cueList = null;
         doneButton = null;
         dialoguePanel = null;
+        patientFolder = null;
+        folderContent = null;
+        folderTab = null;
     }
 
     void HandleDoneClicked()
