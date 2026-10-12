@@ -86,6 +86,8 @@ public class PatientInterviewController : MonoBehaviour
             }
         }
 
+        // A previous interview may have ended mid-line, leaving the questions disabled
+        interviewUI.SetQuestionsEnabled(true);
         interviewUI.SetVisible(true);
         interviewUI.SetSpeakerName(interview.patientDisplayName);
         interviewUI.SetDialogueText($"Select a question to ask {interview.patientDisplayName}.");

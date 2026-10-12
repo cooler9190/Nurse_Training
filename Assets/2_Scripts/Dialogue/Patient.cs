@@ -124,11 +124,9 @@ public class Patient : MonoBehaviour
             interviewUI.MarkHotspotFound(hotspotId);
         }
 
-        if (!TryRecognize(hotspot.ToCue()))
-        {
-            return;
-        }
+        TryRecognize(hotspot.ToCue());
 
+        // Unlock even if the cue was already earned from a question with the same cue id
         if (interviewController != null)
         {
             interviewController.UnlockQuestions(hotspot.unlocksQuestionIds);
