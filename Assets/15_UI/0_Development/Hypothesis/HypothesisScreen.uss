@@ -1,0 +1,280 @@
+.hypothesis-screen {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    padding: 24px;
+    background-color: rgb(12, 30, 42);
+}
+
+.hypothesis-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.hypothesis-title {
+    color: rgb(232, 244, 248);
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.hypothesis-button {
+    width: 120px;
+    height: 44px;
+    margin: 0;
+    background-color: rgb(18, 72, 92);
+    color: rgb(245, 250, 252);
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.hypothesis-button:hover {
+    background-color: rgb(30, 96, 120);
+}
+
+.hypothesis-button--primary {
+    background-color: rgb(32, 120, 96);
+}
+
+.hypothesis-button--primary:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.hypothesis-button:disabled {
+    opacity: 0.45;
+}
+
+/* Bottom margin leaves room for the hand of cards. */
+.hypothesis-body {
+    flex-grow: 1;
+    flex-direction: row;
+    margin-bottom: 270px;
+}
+
+.hypothesis-half {
+    flex-grow: 1;
+    flex-basis: 0;
+    padding: 16px;
+    background-color: rgba(18, 42, 58, 0.92);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+}
+
+.ranking-zone {
+    margin-right: 12px;
+}
+
+.diagnosis-zone {
+    margin-left: 12px;
+}
+
+.ranking-zone--drop-target {
+    border-color: rgb(255, 210, 90);
+    background-color: rgba(40, 64, 80, 0.95);
+}
+
+.hypothesis-panel-title {
+    color: rgb(232, 244, 248);
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.hypothesis-hint {
+    color: rgb(170, 200, 212);
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 12px;
+}
+
+.ranking-list,
+.diagnosis-list {
+    flex-grow: 1;
+}
+
+.hand {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 12px;
+    height: 260px;
+}
+
+.drag-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Cue cards */
+
+.cue-card {
+    padding: 10px;
+    background-color: rgb(236, 244, 247);
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+    flex-shrink: 0;
+}
+
+.cue-card--in-hand {
+    position: absolute;
+    width: 170px;
+    height: 230px;
+    overflow: hidden;
+    translate: -50% 0;
+    transform-origin: 50% 100%;
+    transition-property: scale, translate, rotate, top, margin-left;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-cubic;
+}
+
+/* Scales up from the bottom edge only: lifting the card would uncover the spot under the pointer and make hover flicker. */
+.cue-card--hovered {
+    scale: 1.5 1.5;
+    border-color: rgb(255, 210, 90);
+}
+
+.cue-card--ranked {
+    margin-bottom: 8px;
+}
+
+.cue-card--dragging {
+    opacity: 0.3;
+}
+
+.cue-card--ghost {
+    position: absolute;
+    width: 200px;
+    translate: -50% -50%;
+    rotate: 3deg;
+    opacity: 0.95;
+    border-color: rgb(255, 210, 90);
+}
+
+.cue-card-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.cue-card-rank {
+    min-width: 26px;
+    height: 26px;
+    margin-right: 8px;
+    padding: 0 6px;
+    background-color: rgb(18, 56, 74);
+    color: rgb(245, 250, 252);
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    border-radius: 13px;
+}
+
+.cue-card-origin {
+    margin-left: auto;
+    padding: 2px 6px;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: rgb(245, 250, 252);
+    border-radius: 4px;
+}
+
+.cue-card-origin--question {
+    background-color: rgb(30, 110, 150);
+}
+
+.cue-card-origin--visual {
+    background-color: rgb(120, 76, 160);
+}
+
+.cue-card-origin--examination {
+    background-color: rgb(196, 110, 36);
+}
+
+.cue-card-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+    margin-bottom: 4px;
+}
+
+.cue-card-description {
+    font-size: 13px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+    margin-bottom: 6px;
+}
+
+.cue-card-source {
+    font-size: 11px;
+    -unity-font-style: italic;
+    color: rgb(80, 104, 116);
+    white-space: normal;
+}
+
+/* Diagnosis cards */
+
+.diagnosis-card {
+    margin-bottom: 10px;
+    padding: 12px;
+    background-color: rgb(246, 250, 252);
+    border-radius: 6px;
+    border-left-width: 6px;
+    border-color: rgb(196, 64, 56);
+    flex-shrink: 0;
+}
+
+.diagnosis-card-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.diagnosis-card-priority {
+    margin-right: 10px;
+    padding: 3px 8px;
+    background-color: rgb(196, 64, 56);
+    color: rgb(255, 255, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+}
+
+.diagnosis-card-title {
+    flex-shrink: 1;
+    font-size: 17px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+}
+
+.diagnosis-card-heading {
+    margin-top: 4px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(80, 104, 116);
+}
+
+.diagnosis-card-text {
+    font-size: 14px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+    margin-bottom: 4px;
+}
+
+.diagnosis-card-based-on {
+    margin-top: 6px;
+    font-size: 12px;
+    -unity-font-style: italic;
+    color: rgb(80, 104, 116);
+    white-space: normal;
+}
