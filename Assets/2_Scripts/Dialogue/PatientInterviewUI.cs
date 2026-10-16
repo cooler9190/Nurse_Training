@@ -3,13 +3,32 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 
+/// <summary>
+/// View layer for the patient interview, built on UI Toolkit. It holds no game logic: it shows
+/// what it is told to (speaker, dialogue text, question buttons, cue count, patient folder,
+/// portrait hotspots) and reports player input through events, which
+/// <see cref="PatientInterviewController"/> and <see cref="Patient"/> listen to.
+/// <para>
+/// How it works: in <c>OnEnable</c> it looks up named elements in the <see cref="UIDocument"/>'s
+/// UXML (e.g. <c>dialogue-text</c>, <c>question-list</c>, <c>abcde-0</c>..<c>abcde-4</c>,
+/// <c>portrait</c>) and wires up their callbacks. Any element that is missing is simply skipped,
+/// so the layout can be changed without breaking the script. Visual states (asked, examined,
+/// found, folder open) are applied as USS classes, so styling lives in the stylesheet.
+/// </para>
+/// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class PatientInterviewUI : MonoBehaviour
 {
+    /// <summary>A question button was clicked. Passes the question id.</summary>
     public event Action<string> OnQuestionClicked;
+    /// <summary>A portrait hotspot was clicked. Passes the hotspot id.</summary>
     public event Action<string> OnHotspotClicked;
+    /// <summary>One of the five ABCDE examination buttons was clicked.</summary>
     public event Action<AbcdeLetter> OnAbcdeClicked;
     public event Action OnDoneClicked;
+    /// <summary>The Cues button was clicked; <see cref="Patient"/> opens the hypothesis screen.</summary>
+    public event Action OnCuesClicked;
+    /// <summary>The dialogue panel was clicked, meaning "skip / show the full line".</summary>
     public event Action OnSkipRequested;
 
     const int AbcdeCount = 5;
@@ -22,21 +41,22 @@ public class PatientInterviewUI : MonoBehaviour
     Label speakerName;
     Label dialogueText;
     VisualElement questionList;
-    VisualElement cueList;
     Button doneButton;
     VisualElement dialoguePanel;
     VisualElement patientFolder;
     VisualElement folderContent;
     Button folderTab;
-    VisualElement cueOverlay;
     Button cueInventoryButton;
-    Button cueCloseButton;
     VisualElement abcdeBar;
     readonly Button[] abcdeButtons = new Button[AbcdeCount];
     readonly Action[] abcdeHandlers = new Action[AbcdeCount];
     bool questionsEnabled = true;
     readonly HashSet<string> foundHotspotIds = new HashSet<string>();
 
+    /// <summary>
+    /// Creates one click handler per ABCDE button up front, so the exact same delegate can be
+    /// removed again in <see cref="Unbind"/>.
+    /// </summary>
     void Awake()
     {
         for (int i = 0; i < AbcdeCount; i++)
@@ -58,6 +78,7 @@ public class PatientInterviewUI : MonoBehaviour
         Unbind();
     }
 
+    /// <summary>Shows or hides the whole interview screen.</summary>
     public void SetVisible(bool visible)
     {
         EnsureBound();
@@ -67,6 +88,10 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Resets the screen for a new patient: sets the portrait and its hotspots, fills the patient
+    /// folder (closed), resets the cue count and re-enables all ABCDE buttons.
+    /// </summary>
     public void BeginPatient(SO_Patient patient)
     {
         EnsureBound();
@@ -75,7 +100,7 @@ public class PatientInterviewUI : MonoBehaviour
         RebuildHotspots(patient != null ? patient.visualHotspots : null);
         patientFolder?.RemoveFromClassList("patient-folder--open");
         BuildFolder(patient);
-        SetCueInventoryOpen(false);
+        SetCueCount(0);
 
         for (int i = 0; i < AbcdeCount; i++)
         {
@@ -87,6 +112,7 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>Greys out an ABCDE button once that step has been examined.</summary>
     public void SetAbcdeExamined(AbcdeLetter letter)
     {
         Button button = abcdeButtons[(int)letter];
@@ -97,23 +123,16 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
-    void OpenCueInventory() => SetCueInventoryOpen(true);
-
-    void CloseCueInventory() => SetCueInventoryOpen(false);
-
-    void SetCueInventoryOpen(bool open)
-    {
-        if (cueOverlay != null)
-        {
-            cueOverlay.style.display = open ? DisplayStyle.Flex : DisplayStyle.None;
-        }
-    }
-
+    /// <summary>Opens/closes the slide-out patient folder via the <c>patient-folder--open</c> USS class.</summary>
     void ToggleFolder()
     {
         patientFolder?.ToggleInClassList("patient-folder--open");
     }
 
+    /// <summary>
+    /// Fills the patient folder with label/value rows from the patient's chart, followed by any notes.
+    /// Pacemaker and allergies are flagged as alerts when present.
+    /// </summary>
     void BuildFolder(SO_Patient patient)
     {
         if (folderContent == null)
@@ -160,6 +179,7 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>Adds one "Label: value" row to the folder. <paramref name="alert"/> highlights the value.</summary>
     void AddFolderRow(string label, string value, bool alert = false)
     {
         VisualElement row = new VisualElement();
@@ -180,6 +200,10 @@ public class PatientInterviewUI : MonoBehaviour
         folderContent.Add(row);
     }
 
+    /// <summary>
+    /// Marks a portrait hotspot as found. The id is also remembered so the state survives if the
+    /// hotspot elements are rebuilt.
+    /// </summary>
     public void MarkHotspotFound(string hotspotId)
     {
         if (string.IsNullOrEmpty(hotspotId))
@@ -195,47 +219,13 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
-    public void RebuildCues(IReadOnlyList<RecognizedCue> cues)
+    /// <summary>Updates the "Cues (n)" button label.</summary>
+    public void SetCueCount(int count)
     {
         EnsureBound();
-        if (cueList == null)
-        {
-            return;
-        }
-
-        cueList.Clear();
-        int count = cues != null ? cues.Count : 0;
         if (cueInventoryButton != null)
         {
             cueInventoryButton.text = $"Cues ({count})";
-        }
-
-        if (count == 0)
-        {
-            Label empty = new Label("No cue cards collected yet.");
-            empty.AddToClassList("cue-empty");
-            cueList.Add(empty);
-            return;
-        }
-
-        for (int i = 0; i < cues.Count; i++)
-        {
-            RecognizedCue cue = cues[i];
-            VisualElement card = new VisualElement();
-            card.AddToClassList("cue-card");
-
-            Label title = new Label(string.IsNullOrEmpty(cue.Title) ? cue.Id : cue.Title);
-            title.AddToClassList("cue-card-title");
-            card.Add(title);
-
-            if (!string.IsNullOrEmpty(cue.Description))
-            {
-                Label description = new Label(cue.Description);
-                description.AddToClassList("cue-card-description");
-                card.Add(description);
-            }
-
-            cueList.Add(card);
         }
     }
 
@@ -255,6 +245,10 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Enables/disables the question list and the ABCDE bar together; used to block input while a
+    /// line is playing. The value is remembered and re-applied when the questions are rebuilt.
+    /// </summary>
     public void SetQuestionsEnabled(bool enabled)
     {
         questionsEnabled = enabled;
@@ -269,6 +263,10 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Replaces the question list with one button per entry. Asked questions get the
+    /// <c>question-button--asked</c> class and are disabled.
+    /// </summary>
     public void RebuildQuestions(IReadOnlyList<InterviewQuestionView> questions)
     {
         if (questionList == null)
@@ -304,6 +302,11 @@ public class PatientInterviewUI : MonoBehaviour
         questionList.SetEnabled(questionsEnabled);
     }
 
+    /// <summary>
+    /// Binds to the UI document if that hasn't happened yet. Other scripts may call into this
+    /// component before its own <c>OnEnable</c> has run (or before the UIDocument has built its
+    /// visual tree), so public methods call this first.
+    /// </summary>
     void EnsureBound()
     {
         if (document == null)
@@ -317,6 +320,7 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>Sets the portrait image (or clears it) and re-fits it to the frame.</summary>
     void ApplyPortrait(Sprite sprite)
     {
         portraitSprite = sprite;
@@ -336,7 +340,11 @@ public class PatientInterviewUI : MonoBehaviour
         LayoutPortrait();
     }
 
-    // Hotspot rects are normalized to the sprite, so the portrait must keep the sprite's aspect ratio.
+    /// <summary>
+    /// Sizes the portrait element to the largest rectangle with the sprite's aspect ratio that fits
+    /// inside the frame, and centers it. Re-run whenever the frame changes size.
+    /// Hotspot rects are normalized to the sprite, so the portrait must keep the sprite's aspect ratio.
+    /// </summary>
     void LayoutPortrait()
     {
         if (portrait == null || portraitFrame == null)
@@ -368,6 +376,10 @@ public class PatientInterviewUI : MonoBehaviour
         portrait.style.top = (frame.height - height) * 0.5f;
     }
 
+    /// <summary>
+    /// Creates one absolutely positioned element per hotspot inside the portrait. Positions are
+    /// percentages of the portrait size, so they follow the image when it is resized.
+    /// </summary>
     void RebuildHotspots(IReadOnlyList<VisualHotspot> hotspots)
     {
         if (portrait == null)
@@ -407,6 +419,7 @@ public class PatientInterviewUI : MonoBehaviour
                 element.AddToClassList("portrait-hotspot--found");
             }
 
+            // StopPropagation keeps the click from reaching parent elements underneath the hotspot.
             element.RegisterCallback<PointerDownEvent>(evt =>
             {
                 evt.StopPropagation();
@@ -421,6 +434,11 @@ public class PatientInterviewUI : MonoBehaviour
         return $"hotspot-{hotspotId}";
     }
 
+    /// <summary>
+    /// Looks up all named elements under <paramref name="bindRoot"/> and registers the button and
+    /// pointer callbacks. For scroll views the inner content container is used, since that is where
+    /// children must be added.
+    /// </summary>
     void Bind(VisualElement bindRoot)
     {
         Unbind();
@@ -436,17 +454,7 @@ public class PatientInterviewUI : MonoBehaviour
         dialogueText = bindRoot.Q<Label>("dialogue-text");
         ScrollView questionScroll = bindRoot.Q<ScrollView>("question-list");
         questionList = questionScroll != null ? questionScroll.contentContainer : bindRoot.Q<VisualElement>("question-list");
-        ScrollView cueScroll = bindRoot.Q<ScrollView>("cue-list");
-        cueList = cueScroll != null ? cueScroll.contentContainer : bindRoot.Q<VisualElement>("cue-list");
-        if (cueList != null)
-        {
-            cueList.style.flexDirection = FlexDirection.Row;
-            cueList.style.flexWrap = Wrap.Wrap;
-        }
-
-        cueOverlay = bindRoot.Q<VisualElement>("cue-overlay");
         cueInventoryButton = bindRoot.Q<Button>("cue-inventory-button");
-        cueCloseButton = bindRoot.Q<Button>("cue-close-button");
 
         abcdeBar = bindRoot.Q<VisualElement>("abcde-bar");
         for (int i = 0; i < AbcdeCount; i++)
@@ -477,15 +485,8 @@ public class PatientInterviewUI : MonoBehaviour
 
         if (cueInventoryButton != null)
         {
-            cueInventoryButton.clicked += OpenCueInventory;
+            cueInventoryButton.clicked += HandleCuesClicked;
         }
-
-        if (cueCloseButton != null)
-        {
-            cueCloseButton.clicked += CloseCueInventory;
-        }
-
-        SetCueInventoryOpen(false);
 
         if (dialoguePanel != null)
         {
@@ -498,6 +499,7 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>Removes every callback added in <see cref="Bind"/> and drops all element references.</summary>
     void Unbind()
     {
         if (doneButton != null)
@@ -512,12 +514,7 @@ public class PatientInterviewUI : MonoBehaviour
 
         if (cueInventoryButton != null)
         {
-            cueInventoryButton.clicked -= OpenCueInventory;
-        }
-
-        if (cueCloseButton != null)
-        {
-            cueCloseButton.clicked -= CloseCueInventory;
+            cueInventoryButton.clicked -= HandleCuesClicked;
         }
 
         for (int i = 0; i < AbcdeCount; i++)
@@ -547,20 +544,22 @@ public class PatientInterviewUI : MonoBehaviour
         speakerName = null;
         dialogueText = null;
         questionList = null;
-        cueList = null;
         doneButton = null;
         dialoguePanel = null;
         patientFolder = null;
         folderContent = null;
         folderTab = null;
-        cueOverlay = null;
         cueInventoryButton = null;
-        cueCloseButton = null;
     }
 
     void HandleDoneClicked()
     {
         OnDoneClicked?.Invoke();
+    }
+
+    void HandleCuesClicked()
+    {
+        OnCuesClicked?.Invoke();
     }
 
     void HandleDialoguePointerDown(PointerDownEvent evt)
@@ -569,6 +568,9 @@ public class PatientInterviewUI : MonoBehaviour
     }
 }
 
+/// <summary>
+/// The minimal data the UI needs to draw one question button, passed from the controller to the view.
+/// </summary>
 public readonly struct InterviewQuestionView
 {
     public InterviewQuestionView(string id, string text, bool asked)

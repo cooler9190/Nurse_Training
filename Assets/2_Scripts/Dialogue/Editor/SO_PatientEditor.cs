@@ -1,10 +1,23 @@
 using UnityEditor;
 using UnityEngine;
 
+/// <summary>
+/// Custom Inspector for <see cref="SO_Patient"/> assets. Draws the normal fields, then a preview of
+/// the patient portrait with every <see cref="VisualHotspot"/> drawn on top as a rectangle.
+/// <para>
+/// How it works: click a hotspot to select it, drag it to move it, or drag the small square in its
+/// bottom-right corner to resize it. Mouse movement in pixels is converted to the 0-1 normalized
+/// space stored in <c>VisualHotspot.normalizedRect</c>, and rects are clamped to stay inside the
+/// portrait. Each drag is collapsed into a single Undo step.
+/// </para>
+/// Add or remove hotspots through the regular <c>Visual Hotspots</c> list above the preview.
+/// </summary>
+
 [CustomEditor(typeof(SO_Patient))]
 public class SO_PatientEditor : Editor
 {
     const float PreviewMaxHeight = 420f;
+    // Smallest allowed hotspot size, as a fraction of the portrait.
     const float MinNormalizedSize = 0.02f;
     const float ResizeHandleSize = 12f;
 
@@ -19,6 +32,7 @@ public class SO_PatientEditor : Editor
     int dragIndex = -1;
     int selectedIndex = -1;
     int undoGroup;
+    // Mouse position and hotspot rect when the drag started; the new rect is start + total mouse delta.
     Vector2 dragStartMouse;
     Rect dragStartRect;
     Rect dragRect;
@@ -36,6 +50,11 @@ public class SO_PatientEditor : Editor
         serializedObject.ApplyModifiedProperties();
     }
 
+    /// <summary>
+    /// Reserves space in the Inspector that matches the portrait's aspect ratio (capped at
+    /// <see cref="PreviewMaxHeight"/>), draws the sprite and the hotspot rectangles with their ids,
+    /// then handles mouse input for that area.
+    /// </summary>
     void DrawPreview()
     {
         SerializedProperty portraitProperty = serializedObject.FindProperty("patientPortrait");
@@ -94,6 +113,7 @@ public class SO_PatientEditor : Editor
                     }
                 }
 
+                // Labels are drawn in a second pass so they are never covered by another hotspot's fill.
                 for (int i = 0; i < hotspots.arraySize; i++)
                 {
                     Rect guiRect = NormalizedToGui(preview, DisplayedRect(hotspots, i));
@@ -109,6 +129,12 @@ public class SO_PatientEditor : Editor
         HandlePreviewInput(controlId, preview, hotspots);
     }
 
+    /// <summary>
+    /// Mouse handling for the preview. MouseDown picks the resize handle of the selected hotspot
+    /// first, otherwise the topmost hotspot under the cursor (clicking empty space deselects).
+    /// MouseDrag moves or resizes the hotspot and writes it to the asset; MouseUp ends the drag.
+    /// Taking <c>GUIUtility.hotControl</c> keeps receiving drag events even if the cursor leaves the preview.
+    /// </summary>
     void HandlePreviewInput(int controlId, Rect preview, SerializedProperty hotspots)
     {
         Event evt = Event.current;
@@ -189,6 +215,7 @@ public class SO_PatientEditor : Editor
         }
     }
 
+    /// <summary>Captures the mouse, remembers the starting state and opens an Undo group for the drag.</summary>
     void BeginDrag(int controlId, DragMode mode, int index, SerializedProperty hotspots, Vector2 mousePosition)
     {
         GUIUtility.hotControl = controlId;
@@ -204,6 +231,10 @@ public class SO_PatientEditor : Editor
         dragRect = dragStartRect;
     }
 
+    /// <summary>
+    /// Returns the index of the hotspot under the mouse, or -1. Iterates backwards so the hotspot
+    /// drawn last (on top) wins when rectangles overlap.
+    /// </summary>
     static int HitTest(Rect preview, SerializedProperty hotspots, Vector2 mousePosition)
     {
         for (int i = hotspots.arraySize - 1; i >= 0; i--)
@@ -217,6 +248,7 @@ public class SO_PatientEditor : Editor
         return -1;
     }
 
+    /// <summary>The rect to draw for a hotspot: the live drag rect while it is being dragged, otherwise the stored value.</summary>
     Rect DisplayedRect(SerializedProperty hotspots, int index)
     {
         if (dragMode != DragMode.None && index == dragIndex)
@@ -227,6 +259,7 @@ public class SO_PatientEditor : Editor
         return GetHotspotRect(hotspots, index);
     }
 
+    /// <summary>Reads a hotspot's normalized rect. Out-of-range indices return the same default as a new <see cref="VisualHotspot"/>.</summary>
     static Rect GetHotspotRect(SerializedProperty hotspots, int index)
     {
         if (index < 0 || index >= hotspots.arraySize)
@@ -257,6 +290,7 @@ public class SO_PatientEditor : Editor
         EditorGUI.DrawRect(new Rect(rect.xMax - thickness, rect.y, thickness, rect.height), outline);
     }
 
+    /// <summary>Converts a 0-1 rect (top-left origin) into pixel coordinates inside the preview area.</summary>
     static Rect NormalizedToGui(Rect preview, Rect normalized)
     {
         return new Rect(
@@ -266,11 +300,13 @@ public class SO_PatientEditor : Editor
             normalized.height * preview.height);
     }
 
+    /// <summary>The small square centered on a hotspot's bottom-right corner that is dragged to resize it.</summary>
     static Rect ResizeHandle(Rect guiRect)
     {
         return new Rect(guiRect.xMax - (ResizeHandleSize * 0.5f), guiRect.yMax - (ResizeHandleSize * 0.5f), ResizeHandleSize, ResizeHandleSize);
     }
 
+    /// <summary>Keeps a normalized rect at least <see cref="MinNormalizedSize"/> big and fully inside the 0-1 portrait area.</summary>
     static Rect ClampRect(Rect rect)
     {
         rect.width = Mathf.Clamp(rect.width, MinNormalizedSize, 1f);

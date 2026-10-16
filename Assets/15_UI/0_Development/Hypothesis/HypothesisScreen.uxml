@@ -1,0 +1,24 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="HypothesisScreen.uss" />
+    <ui:VisualElement name="hypothesis-screen" class="hypothesis-screen">
+        <ui:VisualElement class="hypothesis-header">
+            <ui:Button name="back-button" text="Back" class="hypothesis-button" />
+            <ui:Label text="Prioritise Hypotheses" class="hypothesis-title" />
+            <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary" />
+        </ui:VisualElement>
+        <ui:VisualElement class="hypothesis-body">
+            <ui:VisualElement name="ranking-zone" class="hypothesis-half ranking-zone">
+                <ui:Label text="Rank by severity and urgency" class="hypothesis-panel-title" />
+                <ui:Label name="ranking-hint" text="Drag cue cards here. Put the most severe and urgent cue at the top." class="hypothesis-hint" />
+                <ui:ScrollView name="ranking-list" class="ranking-list" />
+            </ui:VisualElement>
+            <ui:VisualElement name="diagnosis-zone" class="hypothesis-half diagnosis-zone">
+                <ui:Label text="Diagnoses" class="hypothesis-panel-title" />
+                <ui:Label name="diagnosis-hint" text="Rank your cues, then press Diagnose." class="hypothesis-hint" />
+                <ui:ScrollView name="diagnosis-list" class="diagnosis-list" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+        <ui:VisualElement name="hand" class="hand" picking-mode="Ignore" />
+        <ui:VisualElement name="drag-layer" class="drag-layer" picking-mode="Ignore" />
+    </ui:VisualElement>
+</ui:UXML>
