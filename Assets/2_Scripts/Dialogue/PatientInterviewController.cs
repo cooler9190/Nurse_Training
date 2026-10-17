@@ -27,8 +27,12 @@ public class PatientInterviewController : MonoBehaviour
     public event Action OnInterviewEnded;
     /// <summary>Raised when a question answer or ABCDE finding awards a cue. <see cref="Patient"/> listens to this.</summary>
     public event Action<RecognizedCue> OnCueRecognized;
+    /// <summary>Raised when Retry wipes the attempt; <see cref="Patient"/> restarts the case from scratch.</summary>
+    public event Action OnCaseRestarted;
 
     [SerializeField] PatientInterviewUI interviewUI;
+    [Tooltip("Hand-over steps and results. Found in the scene automatically if left empty.")]
+    [SerializeField] AssessmentScreenUI assessmentScreen;
     [SerializeField] string playerDisplayName = "You";
     [Tooltip("Seconds between each typed character of the patient's reply.")]
     [SerializeField] float textSpeed = 0.02f;
@@ -47,6 +51,12 @@ public class PatientInterviewController : MonoBehaviour
     bool skipRequested;
     bool warnedMissingVoice;
     EventInstance patientVoice;
+    PatientProgress progress;
+    string pendingQuestionId;
+    int pendingExamination = -1;
+    // True from pressing Hand over until the results are closed.
+    bool assessing;
+    AssessmentStep currentStep;
 
     public bool IsPlaying => isPlaying;
 
@@ -55,6 +65,11 @@ public class PatientInterviewController : MonoBehaviour
         if (interviewUI == null)
         {
             interviewUI = GetComponent<PatientInterviewUI>();
+        }
+
+        if (assessmentScreen == null)
+        {
+            assessmentScreen = FindAnyObjectByType<AssessmentScreenUI>(FindObjectsInactive.Include);
         }
     }
 
@@ -100,6 +115,24 @@ public class PatientInterviewController : MonoBehaviour
         warnedMissingVoice = false;
         isPlaying = true;
         isBusy = false;
+        pendingQuestionId = null;
+        pendingExamination = -1;
+
+        // Resume where the player left off with this patient
+        progress = PatientProgressStore.Get(interview);
+        askedIds.UnionWith(progress.askedQuestionIds);
+        // Keep the saved order so follow-ups stay under the question that unlocked them
+        for (int i = 0; i < progress.unlockedQuestionIds.Count; i++)
+        {
+            if (!unlockedIds.Contains(progress.unlockedQuestionIds[i]))
+            {
+                unlockedIds.Add(progress.unlockedQuestionIds[i]);
+            }
+        }
+        for (int i = 0; i < progress.examinedLetters.Count; i++)
+        {
+            examined[(int)progress.examinedLetters[i]] = true;
+        }
 
         if (interview.questions != null)
         {
@@ -113,10 +146,27 @@ public class PatientInterviewController : MonoBehaviour
             }
         }
 
+        // A previous interview may have ended mid-line, leaving the questions disabled
+        interviewUI.SetQuestionsEnabled(true);
         interviewUI.SetVisible(true);
         interviewUI.SetSpeakerName(interview.patientDisplayName);
-        interviewUI.SetDialogueText($"Select a question to ask {interview.patientDisplayName}.");
+        interviewUI.SetDialogueText(progress.HasProgress
+            ? $"Welcome back. Continue your conversation with {interview.patientDisplayName}."
+            : !string.IsNullOrWhiteSpace(interview.introText)
+                ? interview.introText
+                : $"Select a question to ask {interview.patientDisplayName}.");
+        assessing = false;
+        currentStep = null;
+        RefreshScore();
         RefreshQuestions();
+        for (int i = 0; i < examined.Length; i++)
+        {
+            if (examined[i])
+            {
+                interviewUI.SetAbcdeExamined((AbcdeLetter)i);
+            }
+        }
+
         OnInterviewStarted?.Invoke();
     }
 
@@ -128,10 +178,32 @@ public class PatientInterviewController : MonoBehaviour
             return;
         }
 
+        // An exchange cut short doesn't count, otherwise its cue would be lost for good
+        if (pendingQuestionId != null)
+        {
+            askedIds.Remove(pendingQuestionId);
+            pendingQuestionId = null;
+        }
+
+        if (pendingExamination >= 0)
+        {
+            examined[pendingExamination] = false;
+            pendingExamination = -1;
+        }
+
+        SaveProgress();
+
         StopAllCoroutines();
         StopPatientVoice();
         isPlaying = false;
         isBusy = false;
+        assessing = false;
+        currentStep = null;
+        if (assessmentScreen != null)
+        {
+            assessmentScreen.Hide();
+        }
+
         interview = null;
         askedIds.Clear();
         unlockedIds.Clear();
@@ -146,6 +218,24 @@ public class PatientInterviewController : MonoBehaviour
 
     void SubscribeUi(bool subscribe)
     {
+        if (assessmentScreen != null)
+        {
+            if (subscribe)
+            {
+                assessmentScreen.OnStepSubmitted += HandleStepSubmitted;
+                assessmentScreen.OnNextClicked += HandleNextStep;
+                assessmentScreen.OnResultsClosed += HandleResultsClosed;
+                assessmentScreen.OnRetryClicked += RestartCase;
+            }
+            else
+            {
+                assessmentScreen.OnStepSubmitted -= HandleStepSubmitted;
+                assessmentScreen.OnNextClicked -= HandleNextStep;
+                assessmentScreen.OnResultsClosed -= HandleResultsClosed;
+                assessmentScreen.OnRetryClicked -= RestartCase;
+            }
+        }
+
         if (interviewUI == null)
         {
             return;
@@ -156,6 +246,7 @@ public class PatientInterviewController : MonoBehaviour
             interviewUI.OnQuestionClicked += HandleQuestionClicked;
             interviewUI.OnAbcdeClicked += HandleAbcdeClicked;
             interviewUI.OnDoneClicked += EndInterview;
+            interviewUI.OnFinishClicked += HandleFinishClicked;
             interviewUI.OnSkipRequested += HandleSkipRequested;
         }
         else
@@ -163,6 +254,7 @@ public class PatientInterviewController : MonoBehaviour
             interviewUI.OnQuestionClicked -= HandleQuestionClicked;
             interviewUI.OnAbcdeClicked -= HandleAbcdeClicked;
             interviewUI.OnDoneClicked -= EndInterview;
+            interviewUI.OnFinishClicked -= HandleFinishClicked;
             interviewUI.OnSkipRequested -= HandleSkipRequested;
         }
     }
@@ -191,6 +283,7 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         askedIds.Add(questionId);
+        pendingQuestionId = questionId;
         StartCoroutine(PlayExchange(question));
     }
 
@@ -221,6 +314,9 @@ public class PatientInterviewController : MonoBehaviour
 
         AwardCueIfNeeded(question);
         UnlockFollowUps(question);
+        AwardQuestionScore(question);
+        pendingQuestionId = null;
+        SaveProgress();
         isBusy = false;
         interviewUI.SetQuestionsEnabled(true);
         RefreshQuestions();
@@ -235,6 +331,7 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         examined[(int)letter] = true;
+        pendingExamination = (int)letter;
         StartCoroutine(PlayExamination(letter));
     }
 
@@ -263,6 +360,9 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         interviewUI.SetAbcdeExamined(letter);
+        AwardExaminationScore(letter, finding);
+        pendingExamination = -1;
+        SaveProgress();
         isBusy = false;
         interviewUI.SetQuestionsEnabled(true);
     }
@@ -321,8 +421,202 @@ public class PatientInterviewController : MonoBehaviour
 
         if (changed)
         {
+            SaveProgress();
             RefreshQuestions();
         }
+    }
+
+    /// <summary>Points for a completed question, plus a small penalty for background questions that delay A-B-C in an urgent case.</summary>
+    void AwardQuestionScore(InterviewQuestion question)
+    {
+        CaseScorer.Award(progress, "q:" + question.id, ScoreCategory.InformationGathering, question.points, question.questionText);
+
+        CaseScoringRules rules = interview.scoringRules;
+        bool airwayBreathingCirculationDone = examined[(int)AbcdeLetter.Airway] && examined[(int)AbcdeLetter.Breathing] && examined[(int)AbcdeLetter.Circulation];
+        if (rules != null && rules.urgent && question.historyQuestion && !airwayBreathingCirculationDone)
+        {
+            CaseScorer.Award(progress, "early:" + question.id, ScoreCategory.Abcde, -rules.earlyHistoryPenalty,
+                $"Asked a background question before assessing A, B and C: {question.questionText}");
+        }
+    }
+
+    /// <summary>Points for examining one ABCDE letter; the order they were done in is scored when the case is handed over.</summary>
+    void AwardExaminationScore(AbcdeLetter letter, AbcdeFinding finding)
+    {
+        if (finding != null)
+        {
+            CaseScorer.Award(progress, "abcde:" + letter, ScoreCategory.Abcde, finding.points, $"{letter} examined");
+        }
+
+        if (!progress.examOrder.Contains(letter))
+        {
+            progress.examOrder.Add(letter);
+        }
+    }
+
+    /// <summary>Updates the score shown on the interview screen. Also called by <see cref="Patient"/> after it scores hotspots and diagnoses.</summary>
+    public void RefreshScore()
+    {
+        if (interviewUI != null && interview != null && progress != null)
+        {
+            interviewUI.SetScore(CaseScorer.RunningTotal(interview, progress));
+        }
+    }
+
+    /// <summary>Hand over: walks through the steps not yet answered, then shows the results.</summary>
+    void HandleFinishClicked()
+    {
+        if (!isPlaying || isBusy || assessing || interview == null)
+        {
+            return;
+        }
+
+        if (assessmentScreen == null)
+        {
+            Debug.LogWarning("PatientInterviewController: no AssessmentScreenUI in the scene, so the case cannot be handed over.", this);
+            return;
+        }
+
+        assessing = true;
+        ShowNextStep();
+    }
+
+    void ShowNextStep()
+    {
+        List<AssessmentStep> steps = interview.assessmentSteps;
+        currentStep = null;
+        int number = 0;
+        for (int i = 0; steps != null && i < steps.Count; i++)
+        {
+            if (!HasAnswer(steps[i].id))
+            {
+                currentStep = steps[i];
+                number = i + 1;
+                break;
+            }
+        }
+
+        if (currentStep == null)
+        {
+            ShowResults();
+            return;
+        }
+
+        assessmentScreen.ShowStep(currentStep, number, steps.Count);
+    }
+
+    bool HasAnswer(string stepId)
+    {
+        for (int i = 0; i < progress.stepAnswers.Count; i++)
+        {
+            if (progress.stepAnswers[i].stepId == stepId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void HandleStepSubmitted(IReadOnlyList<int> selected)
+    {
+        if (!assessing || currentStep == null || HasAnswer(currentStep.id))
+        {
+            return;
+        }
+
+        int points = currentStep.Score(selected);
+        progress.stepAnswers.Add(new StepAnswer { stepId = currentStep.id, selected = new List<int>(selected), points = points });
+        SaveProgress();
+        RefreshScore();
+
+        bool isLast = true;
+        for (int i = 0; i < interview.assessmentSteps.Count; i++)
+        {
+            isLast &= HasAnswer(interview.assessmentSteps[i].id);
+        }
+
+        assessmentScreen.ShowStepFeedback(currentStep, selected, points, isLast);
+    }
+
+    void HandleNextStep()
+    {
+        if (assessing)
+        {
+            ShowNextStep();
+        }
+    }
+
+    void ShowResults()
+    {
+        CaseResult result = CaseScorer.Evaluate(interview, progress);
+        progress.completed = true;
+        if (result.Percent >= progress.bestPercent)
+        {
+            progress.bestPercent = result.Percent;
+            progress.bestStars = result.Stars;
+        }
+
+        PatientProgressStore.Save();
+        assessmentScreen.ShowResults(interview, result, progress.bestStars);
+    }
+
+    void HandleResultsClosed()
+    {
+        EndInterview();
+    }
+
+    /// <summary>Retry: wipes this attempt (the best score is kept) and has <see cref="Patient"/> start the case again.</summary>
+    public void RestartCase()
+    {
+        if (!isPlaying || interview == null)
+        {
+            return;
+        }
+
+        SO_Patient patient = interview;
+        StopAllCoroutines();
+        StopPatientVoice();
+        // Stop quietly: raising OnInterviewEnded here would send the player back to the map
+        isPlaying = false;
+        isBusy = false;
+        assessing = false;
+        currentStep = null;
+        pendingQuestionId = null;
+        pendingExamination = -1;
+        interview = null;
+        askedIds.Clear();
+        unlockedIds.Clear();
+        if (assessmentScreen != null)
+        {
+            assessmentScreen.Hide();
+        }
+
+        PatientProgressStore.ResetCase(patient);
+        OnCaseRestarted?.Invoke();
+    }
+
+    void SaveProgress()
+    {
+        if (progress == null)
+        {
+            return;
+        }
+
+        progress.askedQuestionIds.Clear();
+        progress.askedQuestionIds.AddRange(askedIds);
+        progress.unlockedQuestionIds.Clear();
+        progress.unlockedQuestionIds.AddRange(unlockedIds);
+        progress.examinedLetters.Clear();
+        for (int i = 0; i < examined.Length; i++)
+        {
+            if (examined[i])
+            {
+                progress.examinedLetters.Add((AbcdeLetter)i);
+            }
+        }
+
+        PatientProgressStore.Save();
     }
 
     void AwardCueIfNeeded(InterviewQuestion question)

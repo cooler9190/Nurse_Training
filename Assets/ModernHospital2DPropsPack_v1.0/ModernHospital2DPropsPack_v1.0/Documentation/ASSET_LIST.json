@@ -1,0 +1,1132 @@
+{
+  "pack": "Modern Hospital 2D Props Pack",
+  "version": "v1.0",
+  "status": "released",
+  "tile_count": 93,
+  "categories": {
+    "furniture": 15,
+    "equipment": 16,
+    "supplies": 13,
+    "props": 18,
+    "decor": 15,
+    "architecture": 16
+  },
+  "assets": [
+    {
+      "name": "bed_hospital",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_bed_hospital_01.png",
+      "width": 247,
+      "height": 208,
+      "anchor": {
+        "x": 123,
+        "y": 192
+      },
+      "padding": 16
+    },
+    {
+      "name": "gurney_stretcher",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_gurney_stretcher_01.png",
+      "width": 227,
+      "height": 195,
+      "anchor": {
+        "x": 113,
+        "y": 179
+      },
+      "padding": 16
+    },
+    {
+      "name": "bed_examination",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_bed_examination_01.png",
+      "width": 227,
+      "height": 219,
+      "anchor": {
+        "x": 113,
+        "y": 203
+      },
+      "padding": 16
+    },
+    {
+      "name": "wheelchair",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_wheelchair_01.png",
+      "width": 188,
+      "height": 207,
+      "anchor": {
+        "x": 94,
+        "y": 191
+      },
+      "padding": 16
+    },
+    {
+      "name": "iv_stand",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_iv_stand_01.png",
+      "width": 110,
+      "height": 216,
+      "anchor": {
+        "x": 55,
+        "y": 200
+      },
+      "padding": 16
+    },
+    {
+      "name": "curtain_privacy_screen",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_curtain_privacy_screen_01.png",
+      "width": 161,
+      "height": 234,
+      "anchor": {
+        "x": 80,
+        "y": 218
+      },
+      "padding": 16
+    },
+    {
+      "name": "desk_reception",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_desk_reception_01.png",
+      "width": 215,
+      "height": 162,
+      "anchor": {
+        "x": 107,
+        "y": 146
+      },
+      "padding": 16
+    },
+    {
+      "name": "chairs_waiting_row",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_chairs_waiting_row_01.png",
+      "width": 230,
+      "height": 228,
+      "anchor": {
+        "x": 115,
+        "y": 212
+      },
+      "padding": 16
+    },
+    {
+      "name": "desk_doctor",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_desk_doctor_01.png",
+      "width": 218,
+      "height": 218,
+      "anchor": {
+        "x": 109,
+        "y": 202
+      },
+      "padding": 16
+    },
+    {
+      "name": "stool_medical_round",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_stool_medical_round_01.png",
+      "width": 126,
+      "height": 150,
+      "anchor": {
+        "x": 63,
+        "y": 134
+      },
+      "padding": 16
+    },
+    {
+      "name": "table_overbed",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_table_overbed_01.png",
+      "width": 163,
+      "height": 188,
+      "anchor": {
+        "x": 81,
+        "y": 172
+      },
+      "padding": 16
+    },
+    {
+      "name": "cabinet_medicine",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_cabinet_medicine_01.png",
+      "width": 136,
+      "height": 228,
+      "anchor": {
+        "x": 68,
+        "y": 212
+      },
+      "padding": 16
+    },
+    {
+      "name": "cart_instrument",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_cart_instrument_01.png",
+      "width": 177,
+      "height": 200,
+      "anchor": {
+        "x": 88,
+        "y": 184
+      },
+      "padding": 16
+    },
+    {
+      "name": "chair_visitor",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_chair_visitor_01.png",
+      "width": 140,
+      "height": 136,
+      "anchor": {
+        "x": 70,
+        "y": 120
+      },
+      "padding": 16
+    },
+    {
+      "name": "incubator_infant",
+      "category": "furniture",
+      "file": "Tiles/Furniture/hospital_furniture_incubator_infant_01.png",
+      "width": 187,
+      "height": 218,
+      "anchor": {
+        "x": 93,
+        "y": 202
+      },
+      "padding": 16
+    },
+    {
+      "name": "monitor_patient",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_monitor_patient_01.png",
+      "width": 136,
+      "height": 229,
+      "anchor": {
+        "x": 68,
+        "y": 213
+      },
+      "padding": 16
+    },
+    {
+      "name": "defibrillator",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_defibrillator_01.png",
+      "width": 163,
+      "height": 224,
+      "anchor": {
+        "x": 81,
+        "y": 208
+      },
+      "padding": 16
+    },
+    {
+      "name": "xray_machine",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_xray_machine_01.png",
+      "width": 193,
+      "height": 232,
+      "anchor": {
+        "x": 96,
+        "y": 216
+      },
+      "padding": 16
+    },
+    {
+      "name": "ultrasound_cart",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_ultrasound_cart_01.png",
+      "width": 163,
+      "height": 245,
+      "anchor": {
+        "x": 81,
+        "y": 229
+      },
+      "padding": 16
+    },
+    {
+      "name": "ventilator",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_ventilator_01.png",
+      "width": 143,
+      "height": 207,
+      "anchor": {
+        "x": 71,
+        "y": 191
+      },
+      "padding": 16
+    },
+    {
+      "name": "anesthesia_machine",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_anesthesia_machine_01.png",
+      "width": 178,
+      "height": 207,
+      "anchor": {
+        "x": 89,
+        "y": 191
+      },
+      "padding": 16
+    },
+    {
+      "name": "ecg_machine",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_ecg_machine_01.png",
+      "width": 149,
+      "height": 216,
+      "anchor": {
+        "x": 74,
+        "y": 200
+      },
+      "padding": 16
+    },
+    {
+      "name": "lamp_surgical",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_lamp_surgical_01.png",
+      "width": 226,
+      "height": 229,
+      "anchor": {
+        "x": 113,
+        "y": 213
+      },
+      "padding": 16
+    },
+    {
+      "name": "table_operating",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_table_operating_01.png",
+      "width": 238,
+      "height": 193,
+      "anchor": {
+        "x": 119,
+        "y": 177
+      },
+      "padding": 16
+    },
+    {
+      "name": "autoclave_sterilizer",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_autoclave_sterilizer_01.png",
+      "width": 153,
+      "height": 185,
+      "anchor": {
+        "x": 76,
+        "y": 169
+      },
+      "padding": 16
+    },
+    {
+      "name": "microscope_station",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_microscope_station_01.png",
+      "width": 173,
+      "height": 210,
+      "anchor": {
+        "x": 86,
+        "y": 194
+      },
+      "padding": 16
+    },
+    {
+      "name": "blood_pressure_stand",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_blood_pressure_stand_01.png",
+      "width": 145,
+      "height": 217,
+      "anchor": {
+        "x": 72,
+        "y": 201
+      },
+      "padding": 16
+    },
+    {
+      "name": "oxygen_tanks_pair",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_oxygen_tanks_pair_01.png",
+      "width": 128,
+      "height": 204,
+      "anchor": {
+        "x": 64,
+        "y": 188
+      },
+      "padding": 16
+    },
+    {
+      "name": "scale_height_weight",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_scale_height_weight_01.png",
+      "width": 138,
+      "height": 219,
+      "anchor": {
+        "x": 69,
+        "y": 203
+      },
+      "padding": 16
+    },
+    {
+      "name": "dialysis_machine",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_dialysis_machine_01.png",
+      "width": 156,
+      "height": 213,
+      "anchor": {
+        "x": 78,
+        "y": 197
+      },
+      "padding": 16
+    },
+    {
+      "name": "centrifuge_bench",
+      "category": "equipment",
+      "file": "Tiles/Equipment/hospital_equipment_centrifuge_bench_01.png",
+      "width": 195,
+      "height": 199,
+      "anchor": {
+        "x": 97,
+        "y": 183
+      },
+      "padding": 16
+    },
+    {
+      "name": "first_aid_kit",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_first_aid_kit_01.png",
+      "width": 202,
+      "height": 197,
+      "anchor": {
+        "x": 101,
+        "y": 181
+      },
+      "padding": 16
+    },
+    {
+      "name": "medicine_bottles_group",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_medicine_bottles_group_01.png",
+      "width": 183,
+      "height": 194,
+      "anchor": {
+        "x": 91,
+        "y": 178
+      },
+      "padding": 16
+    },
+    {
+      "name": "syringe_tray",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_syringe_tray_01.png",
+      "width": 242,
+      "height": 164,
+      "anchor": {
+        "x": 121,
+        "y": 148
+      },
+      "padding": 16
+    },
+    {
+      "name": "test_tube_rack",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_test_tube_rack_01.png",
+      "width": 211,
+      "height": 206,
+      "anchor": {
+        "x": 105,
+        "y": 190
+      },
+      "padding": 16
+    },
+    {
+      "name": "glove_box",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_glove_box_01.png",
+      "width": 197,
+      "height": 198,
+      "anchor": {
+        "x": 98,
+        "y": 182
+      },
+      "padding": 16
+    },
+    {
+      "name": "mask_box",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_mask_box_01.png",
+      "width": 215,
+      "height": 186,
+      "anchor": {
+        "x": 107,
+        "y": 170
+      },
+      "padding": 16
+    },
+    {
+      "name": "sanitizer_dispenser_stand",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_sanitizer_dispenser_stand_01.png",
+      "width": 147,
+      "height": 225,
+      "anchor": {
+        "x": 73,
+        "y": 209
+      },
+      "padding": 16
+    },
+    {
+      "name": "crutches_pair",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_crutches_pair_01.png",
+      "width": 188,
+      "height": 222,
+      "anchor": {
+        "x": 94,
+        "y": 206
+      },
+      "padding": 16
+    },
+    {
+      "name": "oxygen_mask",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_oxygen_mask_01.png",
+      "width": 221,
+      "height": 194,
+      "anchor": {
+        "x": 110,
+        "y": 178
+      },
+      "padding": 16
+    },
+    {
+      "name": "kidney_dish",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_kidney_dish_01.png",
+      "width": 224,
+      "height": 154,
+      "anchor": {
+        "x": 112,
+        "y": 138
+      },
+      "padding": 16
+    },
+    {
+      "name": "stethoscope",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_stethoscope_01.png",
+      "width": 238,
+      "height": 177,
+      "anchor": {
+        "x": 119,
+        "y": 161
+      },
+      "padding": 16
+    },
+    {
+      "name": "thermometers_group",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_thermometers_group_01.png",
+      "width": 130,
+      "height": 197,
+      "anchor": {
+        "x": 65,
+        "y": 181
+      },
+      "padding": 16
+    },
+    {
+      "name": "pill_blister_packs",
+      "category": "supplies",
+      "file": "Tiles/Supplies/hospital_supplies_pill_blister_packs_01.png",
+      "width": 141,
+      "height": 99,
+      "anchor": {
+        "x": 70,
+        "y": 83
+      },
+      "padding": 16
+    },
+    {
+      "name": "sink_medical_small",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_sink_medical_small_01.png",
+      "width": 197,
+      "height": 196,
+      "anchor": {
+        "x": 98,
+        "y": 180
+      },
+      "padding": 16
+    },
+    {
+      "name": "forceps_scissors_tray",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_forceps_scissors_tray_01.png",
+      "width": 221,
+      "height": 159,
+      "anchor": {
+        "x": 110,
+        "y": 143
+      },
+      "padding": 16
+    },
+    {
+      "name": "gauze_stack",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_gauze_stack_01.png",
+      "width": 196,
+      "height": 165,
+      "anchor": {
+        "x": 98,
+        "y": 149
+      },
+      "padding": 16
+    },
+    {
+      "name": "saline_bag",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_saline_bag_01.png",
+      "width": 172,
+      "height": 193,
+      "anchor": {
+        "x": 86,
+        "y": 177
+      },
+      "padding": 16
+    },
+    {
+      "name": "gown_patient_folded",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_gown_patient_folded_01.png",
+      "width": 217,
+      "height": 165,
+      "anchor": {
+        "x": 108,
+        "y": 149
+      },
+      "padding": 16
+    },
+    {
+      "name": "pillow_blanket_stack",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_pillow_blanket_stack_01.png",
+      "width": 205,
+      "height": 188,
+      "anchor": {
+        "x": 102,
+        "y": 172
+      },
+      "padding": 16
+    },
+    {
+      "name": "bedpan_urinal",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_bedpan_urinal_01.png",
+      "width": 211,
+      "height": 183,
+      "anchor": {
+        "x": 105,
+        "y": 167
+      },
+      "padding": 16
+    },
+    {
+      "name": "iv_catheter_tray",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_iv_catheter_tray_01.png",
+      "width": 215,
+      "height": 173,
+      "anchor": {
+        "x": 107,
+        "y": 157
+      },
+      "padding": 16
+    },
+    {
+      "name": "blood_tubes_rack",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_blood_tubes_rack_01.png",
+      "width": 212,
+      "height": 200,
+      "anchor": {
+        "x": 106,
+        "y": 184
+      },
+      "padding": 16
+    },
+    {
+      "name": "ice_pack_medical",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_ice_pack_medical_01.png",
+      "width": 193,
+      "height": 159,
+      "anchor": {
+        "x": 96,
+        "y": 143
+      },
+      "padding": 16
+    },
+    {
+      "name": "disinfectant_spray",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_disinfectant_spray_01.png",
+      "width": 114,
+      "height": 210,
+      "anchor": {
+        "x": 57,
+        "y": 194
+      },
+      "padding": 16
+    },
+    {
+      "name": "cotton_swab_jar",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_cotton_swab_jar_01.png",
+      "width": 129,
+      "height": 196,
+      "anchor": {
+        "x": 64,
+        "y": 180
+      },
+      "padding": 16
+    },
+    {
+      "name": "tongue_depressor_jar",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_tongue_depressor_jar_01.png",
+      "width": 129,
+      "height": 199,
+      "anchor": {
+        "x": 64,
+        "y": 183
+      },
+      "padding": 16
+    },
+    {
+      "name": "hip_brace",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_hip_brace_01.png",
+      "width": 185,
+      "height": 187,
+      "anchor": {
+        "x": 92,
+        "y": 171
+      },
+      "padding": 16
+    },
+    {
+      "name": "neck_collar",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_neck_collar_01.png",
+      "width": 203,
+      "height": 180,
+      "anchor": {
+        "x": 101,
+        "y": 164
+      },
+      "padding": 16
+    },
+    {
+      "name": "penlight_exam",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_penlight_exam_01.png",
+      "width": 190,
+      "height": 167,
+      "anchor": {
+        "x": 95,
+        "y": 151
+      },
+      "padding": 16
+    },
+    {
+      "name": "reflex_hammer",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_reflex_hammer_01.png",
+      "width": 206,
+      "height": 172,
+      "anchor": {
+        "x": 103,
+        "y": 156
+      },
+      "padding": 16
+    },
+    {
+      "name": "specimen_cups_group",
+      "category": "props",
+      "file": "Tiles/Props/hospital_props_specimen_cups_group_01.png",
+      "width": 209,
+      "height": 185,
+      "anchor": {
+        "x": 104,
+        "y": 169
+      },
+      "padding": 16
+    },
+    {
+      "name": "door_sign_blank",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_door_sign_blank_01.png",
+      "width": 139,
+      "height": 132,
+      "anchor": {
+        "x": 69,
+        "y": 116
+      },
+      "padding": 16
+    },
+    {
+      "name": "sign_directory_stand_blank",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_sign_directory_stand_blank_01.png",
+      "width": 146,
+      "height": 210,
+      "anchor": {
+        "x": 73,
+        "y": 194
+      },
+      "padding": 16
+    },
+    {
+      "name": "lightbox_cross_plain",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_lightbox_cross_plain_01.png",
+      "width": 168,
+      "height": 200,
+      "anchor": {
+        "x": 84,
+        "y": 184
+      },
+      "padding": 16
+    },
+    {
+      "name": "queue_display_blank",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_queue_display_blank_01.png",
+      "width": 192,
+      "height": 186,
+      "anchor": {
+        "x": 96,
+        "y": 170
+      },
+      "padding": 16
+    },
+    {
+      "name": "water_dispenser_column",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_water_dispenser_column_01.png",
+      "width": 105,
+      "height": 220,
+      "anchor": {
+        "x": 52,
+        "y": 204
+      },
+      "padding": 16
+    },
+    {
+      "name": "vending_machine_blank",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_vending_machine_blank_01.png",
+      "width": 156,
+      "height": 216,
+      "anchor": {
+        "x": 78,
+        "y": 200
+      },
+      "padding": 16
+    },
+    {
+      "name": "play_mat_children",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_play_mat_children_01.png",
+      "width": 250,
+      "height": 140,
+      "anchor": {
+        "x": 125,
+        "y": 124
+      },
+      "padding": 16
+    },
+    {
+      "name": "plant_hanging_ward",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_plant_hanging_ward_01.png",
+      "width": 146,
+      "height": 211,
+      "anchor": {
+        "x": 73,
+        "y": 195
+      },
+      "padding": 16
+    },
+    {
+      "name": "curtain_track_segment",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_curtain_track_segment_01.png",
+      "width": 197,
+      "height": 221,
+      "anchor": {
+        "x": 98,
+        "y": 205
+      },
+      "padding": 16
+    },
+    {
+      "name": "uv_sterilizer_cart",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_uv_sterilizer_cart_01.png",
+      "width": 134,
+      "height": 211,
+      "anchor": {
+        "x": 67,
+        "y": 195
+      },
+      "padding": 16
+    },
+    {
+      "name": "stretcher_wall_mount",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_stretcher_wall_mount_01.png",
+      "width": 234,
+      "height": 186,
+      "anchor": {
+        "x": 117,
+        "y": 170
+      },
+      "padding": 16
+    },
+    {
+      "name": "wheelchair_parking_rack",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_wheelchair_parking_rack_01.png",
+      "width": 207,
+      "height": 168,
+      "anchor": {
+        "x": 103,
+        "y": 152
+      },
+      "padding": 16
+    },
+    {
+      "name": "locker_staff_narrow",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_locker_staff_narrow_01.png",
+      "width": 111,
+      "height": 205,
+      "anchor": {
+        "x": 55,
+        "y": 189
+      },
+      "padding": 16
+    },
+    {
+      "name": "floor_decal_warning_blank",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_floor_decal_warning_blank_01.png",
+      "width": 185,
+      "height": 121,
+      "anchor": {
+        "x": 92,
+        "y": 105
+      },
+      "padding": 16
+    },
+    {
+      "name": "barrier_posts_pair",
+      "category": "decor",
+      "file": "Tiles/Decor/hospital_decor_barrier_posts_pair_01.png",
+      "width": 203,
+      "height": 205,
+      "anchor": {
+        "x": 101,
+        "y": 189
+      },
+      "padding": 16
+    },
+    {
+      "name": "floor_linoleum_white",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_floor_linoleum_white_01.png",
+      "width": 271,
+      "height": 203,
+      "anchor": {
+        "x": 135,
+        "y": 187
+      },
+      "padding": 16
+    },
+    {
+      "name": "floor_linoleum_green",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_floor_linoleum_green_01.png",
+      "width": 273,
+      "height": 204,
+      "anchor": {
+        "x": 136,
+        "y": 188
+      },
+      "padding": 16
+    },
+    {
+      "name": "floor_corridor_antislip",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_floor_corridor_antislip_01.png",
+      "width": 272,
+      "height": 203,
+      "anchor": {
+        "x": 136,
+        "y": 187
+      },
+      "padding": 16
+    },
+    {
+      "name": "floor_ramp_entrance",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_floor_ramp_entrance_01.png",
+      "width": 271,
+      "height": 204,
+      "anchor": {
+        "x": 135,
+        "y": 188
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_ward_straight",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_ward_straight_01.png",
+      "width": 276,
+      "height": 186,
+      "anchor": {
+        "x": 138,
+        "y": 170
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_corner_l",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_corner_l_01.png",
+      "width": 278,
+      "height": 202,
+      "anchor": {
+        "x": 139,
+        "y": 186
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_doorway",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_doorway_01.png",
+      "width": 276,
+      "height": 187,
+      "anchor": {
+        "x": 138,
+        "y": 171
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_observation_window",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_observation_window_01.png",
+      "width": 273,
+      "height": 186,
+      "anchor": {
+        "x": 136,
+        "y": 170
+      },
+      "padding": 16
+    },
+    {
+      "name": "door_double_swing",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_door_double_swing_01.png",
+      "width": 278,
+      "height": 185,
+      "anchor": {
+        "x": 139,
+        "y": 169
+      },
+      "padding": 16
+    },
+    {
+      "name": "door_ward_single",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_door_ward_single_01.png",
+      "width": 276,
+      "height": 184,
+      "anchor": {
+        "x": 138,
+        "y": 168
+      },
+      "padding": 16
+    },
+    {
+      "name": "partition_glass",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_partition_glass_01.png",
+      "width": 275,
+      "height": 160,
+      "anchor": {
+        "x": 137,
+        "y": 144
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_corridor_handrail",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_corridor_handrail_01.png",
+      "width": 277,
+      "height": 183,
+      "anchor": {
+        "x": 138,
+        "y": 167
+      },
+      "padding": 16
+    },
+    {
+      "name": "wall_nurse_station_low",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_wall_nurse_station_low_01.png",
+      "width": 282,
+      "height": 120,
+      "anchor": {
+        "x": 141,
+        "y": 104
+      },
+      "padding": 16
+    },
+    {
+      "name": "column_structural",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_column_structural_01.png",
+      "width": 127,
+      "height": 201,
+      "anchor": {
+        "x": 63,
+        "y": 185
+      },
+      "padding": 16
+    },
+    {
+      "name": "threshold_strip",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_threshold_strip_01.png",
+      "width": 275,
+      "height": 105,
+      "anchor": {
+        "x": 137,
+        "y": 89
+      },
+      "padding": 16
+    },
+    {
+      "name": "curb_ambulance_bay",
+      "category": "architecture",
+      "file": "Tiles/Architecture/hospital_architecture_curb_ambulance_bay_01.png",
+      "width": 274,
+      "height": 102,
+      "anchor": {
+        "x": 137,
+        "y": 86
+      },
+      "padding": 16
+    }
+  ]
+}

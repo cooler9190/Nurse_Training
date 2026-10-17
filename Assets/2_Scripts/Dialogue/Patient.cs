@@ -35,6 +35,7 @@ public class Patient : MonoBehaviour
 
     readonly List<RecognizedCue> recognizedCues = new List<RecognizedCue>();
     readonly HashSet<string> recognizedIds = new HashSet<string>();
+    PatientProgress progress;
 
     public SO_Patient Profile => profile;
     /// <summary>Cues found so far, in the order they were discovered.</summary>
@@ -88,9 +89,26 @@ public class Patient : MonoBehaviour
         recognizedCues.Clear();
         recognizedIds.Clear();
 
+        // Bring back what the player already found with this patient
+        progress = PatientProgressStore.Get(profile);
+        for (int i = 0; i < progress.cues.Count; i++)
+        {
+            RecognizedCue saved = progress.cues[i].ToCue();
+            if (!string.IsNullOrEmpty(saved.Id) && recognizedIds.Add(saved.Id))
+            {
+                recognizedCues.Add(saved);
+            }
+        }
+
         if (interviewUI != null)
         {
             interviewUI.BeginPatient(profile);
+            for (int i = 0; i < progress.foundHotspotIds.Count; i++)
+            {
+                interviewUI.MarkHotspotFound(progress.foundHotspotIds[i]);
+            }
+
+            interviewUI.SetCueCount(recognizedCues.Count);
         }
 
         if (hypothesisScreen != null)
@@ -113,15 +131,29 @@ public class Patient : MonoBehaviour
     /// <summary>Hooks up (or removes) the cue, hotspot and Cues button listeners on the controller and UI.</summary>
     void Subscribe(bool subscribe)
     {
+        if (hypothesisScreen != null)
+        {
+            if (subscribe)
+            {
+                hypothesisScreen.OnDiagnosed += HandleDiagnosed;
+            }
+            else
+            {
+                hypothesisScreen.OnDiagnosed -= HandleDiagnosed;
+            }
+        }
+
         if (interviewController != null)
         {
             if (subscribe)
             {
                 interviewController.OnCueRecognized += HandleQuestionCue;
+                interviewController.OnCaseRestarted += HandleCaseRestarted;
             }
             else
             {
                 interviewController.OnCueRecognized -= HandleQuestionCue;
+                interviewController.OnCaseRestarted -= HandleCaseRestarted;
             }
         }
 
@@ -143,6 +175,36 @@ public class Patient : MonoBehaviour
     void HandleQuestionCue(RecognizedCue cue)
     {
         TryRecognize(cue);
+    }
+
+    /// <summary>Retry was pressed: the progress is already wiped, so beginning again gives a clean start.</summary>
+    void HandleCaseRestarted()
+    {
+        if (profile != null)
+        {
+            Begin(profile);
+        }
+    }
+
+    /// <summary>Scores the ranking the player just diagnosed against the priorities authored on the patient.</summary>
+    void HandleDiagnosed(IReadOnlyList<RankedDiagnosis> ranked)
+    {
+        if (profile == null || progress == null)
+        {
+            return;
+        }
+
+        CaseScorer.ScoreDiagnoses(profile, progress, ranked);
+        PatientProgressStore.Save();
+        RefreshScore();
+    }
+
+    void RefreshScore()
+    {
+        if (interviewController != null)
+        {
+            interviewController.RefreshScore();
+        }
     }
 
     void OpenHypothesisScreen()
@@ -173,11 +235,17 @@ public class Patient : MonoBehaviour
             interviewUI.MarkHotspotFound(hotspotId);
         }
 
-        if (!TryRecognize(hotspot.ToCue()))
+        if (progress != null && !progress.foundHotspotIds.Contains(hotspotId))
         {
-            return;
+            progress.foundHotspotIds.Add(hotspotId);
+            CaseScorer.Award(progress, "hotspot:" + hotspotId, ScoreCategory.InformationGathering, hotspot.points, hotspot.cueTitle);
+            PatientProgressStore.Save();
+            RefreshScore();
         }
 
+        TryRecognize(hotspot.ToCue());
+
+        // Unlock even if the cue was already earned from a question with the same cue id
         if (interviewController != null)
         {
             interviewController.UnlockQuestions(hotspot.unlocksQuestionIds);
@@ -196,6 +264,12 @@ public class Patient : MonoBehaviour
         }
 
         recognizedCues.Add(cue);
+        if (progress != null)
+        {
+            progress.cues.Add(new SavedCue(cue));
+            PatientProgressStore.Save();
+        }
+
         Debug.Log($"Cue recognized: {cue.Id}");
         OnCueRecognized?.Invoke(cue);
 
