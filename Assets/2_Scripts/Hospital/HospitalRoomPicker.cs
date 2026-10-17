@@ -99,7 +99,7 @@ public class HospitalRoomPicker : MonoBehaviour
 
         SetHovered(null);
         hospitalRoot.SetActive(false);
-        patient.Begin(room.Patient);
+        patient.Begin(room.NextCase());
 
         // Begin can fail (missing asset/UI), so don't leave the player on an empty screen
         if (interviewController != null && !interviewController.IsPlaying)
