@@ -83,13 +83,6 @@ public static class PatientProgressStore
         }
     }
 
-    // Retry: wipe this attempt, keep the best score
-    public static void ResetCase(SO_Patient patient)
-    {
-        Get(patient).ResetAttempt();
-        Save();
-    }
-
     public static void ResetAll()
     {
         progressById.Clear();

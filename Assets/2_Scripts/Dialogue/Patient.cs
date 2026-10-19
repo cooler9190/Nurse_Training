@@ -131,29 +131,15 @@ public class Patient : MonoBehaviour
     /// <summary>Hooks up (or removes) the cue, hotspot and Cues button listeners on the controller and UI.</summary>
     void Subscribe(bool subscribe)
     {
-        if (hypothesisScreen != null)
-        {
-            if (subscribe)
-            {
-                hypothesisScreen.OnDiagnosed += HandleDiagnosed;
-            }
-            else
-            {
-                hypothesisScreen.OnDiagnosed -= HandleDiagnosed;
-            }
-        }
-
         if (interviewController != null)
         {
             if (subscribe)
             {
                 interviewController.OnCueRecognized += HandleQuestionCue;
-                interviewController.OnCaseRestarted += HandleCaseRestarted;
             }
             else
             {
                 interviewController.OnCueRecognized -= HandleQuestionCue;
-                interviewController.OnCaseRestarted -= HandleCaseRestarted;
             }
         }
 
@@ -175,36 +161,6 @@ public class Patient : MonoBehaviour
     void HandleQuestionCue(RecognizedCue cue)
     {
         TryRecognize(cue);
-    }
-
-    /// <summary>Retry was pressed: the progress is already wiped, so beginning again gives a clean start.</summary>
-    void HandleCaseRestarted()
-    {
-        if (profile != null)
-        {
-            Begin(profile);
-        }
-    }
-
-    /// <summary>Scores the ranking the player just diagnosed against the priorities authored on the patient.</summary>
-    void HandleDiagnosed(IReadOnlyList<RankedDiagnosis> ranked)
-    {
-        if (profile == null || progress == null)
-        {
-            return;
-        }
-
-        CaseScorer.ScoreDiagnoses(profile, progress, ranked);
-        PatientProgressStore.Save();
-        RefreshScore();
-    }
-
-    void RefreshScore()
-    {
-        if (interviewController != null)
-        {
-            interviewController.RefreshScore();
-        }
     }
 
     void OpenHypothesisScreen()
@@ -238,9 +194,7 @@ public class Patient : MonoBehaviour
         if (progress != null && !progress.foundHotspotIds.Contains(hotspotId))
         {
             progress.foundHotspotIds.Add(hotspotId);
-            CaseScorer.Award(progress, "hotspot:" + hotspotId, ScoreCategory.InformationGathering, hotspot.points, hotspot.cueTitle);
             PatientProgressStore.Save();
-            RefreshScore();
         }
 
         TryRecognize(hotspot.ToCue());

@@ -33,18 +33,6 @@ public class SO_Patient : ScriptableObject
     /// <summary>Diagnoses the player can arrive at on the hypothesis screen, linked to the cues that support them.</summary>
     public List<Diagnosis> diagnoses = new List<Diagnosis>();
 
-    [Header("Case")]
-    public CaseDifficulty difficulty;
-    public string caseTitle;
-    [TextArea(2, 8)]
-    public string introText;
-    [TextArea(2, 6)]
-    public string learningGoals;
-
-    [Header("Scoring")]
-    public CaseScoringRules scoringRules = new CaseScoringRules();
-    public List<AssessmentStep> assessmentSteps = new List<AssessmentStep>();
-
     /// <summary>Returns the finding for the given ABCDE step, or null if none is defined.</summary>
     public AbcdeFinding FindAbcdeFinding(AbcdeLetter letter)
     {
@@ -116,7 +104,6 @@ public class SO_Patient : ScriptableObject
         WarnDuplicateIds(questions, "question", question => question != null ? question.id : null);
         WarnDuplicateIds(visualHotspots, "hotspot", hotspot => hotspot != null ? hotspot.id : null);
         WarnDuplicateIds(diagnoses, "diagnosis", diagnosis => diagnosis != null ? diagnosis.id : null);
-        WarnDuplicateIds(assessmentSteps, "assessment step", step => step != null ? step.id : null);
     }
 
     void WarnDuplicateIds<T>(List<T> items, string label, Func<T, string> idSelector)
@@ -196,10 +183,6 @@ public class InterviewQuestion
     public string cueTitle;
     [TextArea(1, 3)]
     public string cueDescription;
-    [Tooltip("Points for asking this. Key questions are positive, irrelevant or wasteful ones slightly negative.")]
-    public int points;
-    [Tooltip("Background question (medical history, medication...). Costs points in an urgent case before A, B and C are assessed.")]
-    public bool historyQuestion;
 
     /// <summary>Builds the cue awarded by this question, filling in defaults for empty fields.</summary>
     public RecognizedCue ToCue()
@@ -241,8 +224,6 @@ public class AbcdeFinding
     public string cueTitle;
     [TextArea(1, 3)]
     public string cueDescription;
-    [Tooltip("Points for examining this letter. Higher where the finding is critical.")]
-    public int points;
 
     /// <summary>Builds the cue awarded by this finding, filling in defaults for empty fields.</summary>
     public RecognizedCue ToCue()
@@ -273,7 +254,6 @@ public class VisualHotspot
     public string cueDescription;
     /// <summary>Ids of questions that become available once this hotspot's cue is recognized.</summary>
     public List<string> unlocksQuestionIds = new List<string>();
-    public int points;
 
     /// <summary>Builds the cue awarded by this hotspot, filling in defaults for empty fields.</summary>
     public RecognizedCue ToCue()
@@ -301,11 +281,4 @@ public class Diagnosis
     public string treatment;
     /// <summary>Cue ids that point towards this diagnosis.</summary>
     public List<string> supportingCueIds = new List<string>();
-    [Tooltip("Where this diagnosis belongs in the urgency order (1 = most urgent). 0 marks a distractor that should not be prioritised.")]
-    public int correctPriority;
-    [Tooltip("Points for ranking it in the right place. Half of it for being one place off.")]
-    public int points = 10;
-    [TextArea(1, 4)]
-    [Tooltip("Why it belongs at this priority (or why it is a distractor). Shown in the results.")]
-    public string feedback;
 }

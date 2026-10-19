@@ -12,7 +12,6 @@
         </ui:VisualElement>
         <ui:VisualElement name="cue-bar" class="cue-bar">
             <ui:Button name="cue-inventory-button" text="Cues (0)" class="cue-inventory-button" />
-            <ui:Label name="score-label" text="Points: 0" class="score-label" />
             <ui:VisualElement name="abcde-bar" class="abcde-bar">
                 <ui:Button name="abcde-0" text="A" class="abcde-button" />
                 <ui:Button name="abcde-1" text="B" class="abcde-button" />
@@ -24,10 +23,7 @@
         <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
             <ui:VisualElement class="dialogue-header">
                 <ui:Label name="speaker-name" text="Patient" class="speaker-name" />
-                <ui:VisualElement class="dialogue-buttons">
-                    <ui:Button name="finish-button" text="Hand over" class="finish-button" />
-                    <ui:Button name="done-button" text="Done" class="done-button" />
-                </ui:VisualElement>
+                <ui:Button name="done-button" text="Done" class="done-button" />
             </ui:VisualElement>
             <ui:Label name="dialogue-text" text="" class="dialogue-text" />
         </ui:VisualElement>

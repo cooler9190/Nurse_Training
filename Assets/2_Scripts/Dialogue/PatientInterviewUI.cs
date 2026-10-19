@@ -26,8 +26,6 @@ public class PatientInterviewUI : MonoBehaviour
     /// <summary>One of the five ABCDE examination buttons was clicked.</summary>
     public event Action<AbcdeLetter> OnAbcdeClicked;
     public event Action OnDoneClicked;
-    /// <summary>The Hand over button was clicked: the player is done gathering information.</summary>
-    public event Action OnFinishClicked;
     /// <summary>The Cues button was clicked; <see cref="Patient"/> opens the hypothesis screen.</summary>
     public event Action OnCuesClicked;
     /// <summary>The dialogue panel was clicked, meaning "skip / show the full line".</summary>
@@ -44,8 +42,6 @@ public class PatientInterviewUI : MonoBehaviour
     Label dialogueText;
     VisualElement questionList;
     Button doneButton;
-    Button finishButton;
-    Label scoreLabel;
     VisualElement dialoguePanel;
     VisualElement patientFolder;
     VisualElement folderContent;
@@ -471,8 +467,6 @@ public class PatientInterviewUI : MonoBehaviour
         }
 
         doneButton = bindRoot.Q<Button>("done-button");
-        finishButton = bindRoot.Q<Button>("finish-button");
-        scoreLabel = bindRoot.Q<Label>("score-label");
         dialoguePanel = bindRoot.Q<VisualElement>("dialogue-panel");
         patientFolder = bindRoot.Q<VisualElement>("patient-folder");
         ScrollView folderScroll = bindRoot.Q<ScrollView>("folder-content");
@@ -482,11 +476,6 @@ public class PatientInterviewUI : MonoBehaviour
         if (doneButton != null)
         {
             doneButton.clicked += HandleDoneClicked;
-        }
-
-        if (finishButton != null)
-        {
-            finishButton.clicked += HandleFinishClicked;
         }
 
         if (folderTab != null)
@@ -516,11 +505,6 @@ public class PatientInterviewUI : MonoBehaviour
         if (doneButton != null)
         {
             doneButton.clicked -= HandleDoneClicked;
-        }
-
-        if (finishButton != null)
-        {
-            finishButton.clicked -= HandleFinishClicked;
         }
 
         if (folderTab != null)
@@ -561,8 +545,6 @@ public class PatientInterviewUI : MonoBehaviour
         dialogueText = null;
         questionList = null;
         doneButton = null;
-        finishButton = null;
-        scoreLabel = null;
         dialoguePanel = null;
         patientFolder = null;
         folderContent = null;
@@ -573,20 +555,6 @@ public class PatientInterviewUI : MonoBehaviour
     void HandleDoneClicked()
     {
         OnDoneClicked?.Invoke();
-    }
-
-    void HandleFinishClicked()
-    {
-        OnFinishClicked?.Invoke();
-    }
-
-    /// <summary>Shows the running score next to the Cues button.</summary>
-    public void SetScore(int points)
-    {
-        if (scoreLabel != null)
-        {
-            scoreLabel.text = $"Points: {points}";
-        }
     }
 
     void HandleCuesClicked()

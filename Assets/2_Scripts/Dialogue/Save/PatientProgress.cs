@@ -12,49 +12,8 @@ public class PatientProgress
     public List<SavedCue> cues = new List<SavedCue>();
     public List<string> foundHotspotIds = new List<string>();
 
-    // Scoring: what has been earned so far, and the answers given on the hand-over steps
-    public List<AbcdeLetter> examOrder = new List<AbcdeLetter>();
-    public List<ScoreEvent> scoreEvents = new List<ScoreEvent>();
-    public List<StepAnswer> stepAnswers = new List<StepAnswer>();
-
-    // Best result so far survives a retry
-    public bool completed;
-    public int bestPercent;
-    public int bestStars;
-
     public bool HasProgress =>
-        askedQuestionIds.Count > 0 || examinedLetters.Count > 0 || cues.Count > 0 || foundHotspotIds.Count > 0 || stepAnswers.Count > 0;
-
-    // Starts the case over but keeps the best result
-    public void ResetAttempt()
-    {
-        askedQuestionIds.Clear();
-        unlockedQuestionIds.Clear();
-        examinedLetters.Clear();
-        cues.Clear();
-        foundHotspotIds.Clear();
-        examOrder.Clear();
-        scoreEvents.Clear();
-        stepAnswers.Clear();
-        completed = false;
-    }
-}
-
-[Serializable]
-public class ScoreEvent
-{
-    public string key;
-    public ScoreCategory category;
-    public int points;
-    public string label;
-}
-
-[Serializable]
-public class StepAnswer
-{
-    public string stepId;
-    public List<int> selected = new List<int>();
-    public int points;
+        askedQuestionIds.Count > 0 || examinedLetters.Count > 0 || cues.Count > 0 || foundHotspotIds.Count > 0;
 }
 
 [Serializable]
