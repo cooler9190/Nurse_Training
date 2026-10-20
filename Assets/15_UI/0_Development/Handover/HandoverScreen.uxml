@@ -1,0 +1,25 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="HandoverScreen.uss" />
+    <ui:VisualElement name="handover-root" class="handover-root" picking-mode="Ignore">
+        <ui:Button name="handover-button" text="Hand over" class="handover-button" />
+        <ui:VisualElement name="handover-screen" class="handover-screen">
+            <ui:VisualElement class="handover-header">
+                <ui:Button name="handover-back" text="Back" class="handover-action" />
+                <ui:Label text="Hand over" class="handover-title" />
+                <ui:Button name="handover-finish" text="Finish case" class="handover-action handover-action--primary" />
+            </ui:VisualElement>
+            <ui:Label name="handover-summary" text="" class="handover-summary" />
+            <ui:Label name="handover-explanation" text="" class="handover-explanation" />
+            <ui:VisualElement class="handover-body">
+                <ui:VisualElement class="handover-column">
+                    <ui:Label text="Diagnosis priorities" class="handover-column-title" />
+                    <ui:ScrollView name="handover-diagnoses" class="handover-list" />
+                </ui:VisualElement>
+                <ui:VisualElement class="handover-column">
+                    <ui:Label text="Cue ranking" class="handover-column-title" />
+                    <ui:ScrollView name="handover-cues" class="handover-list" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
