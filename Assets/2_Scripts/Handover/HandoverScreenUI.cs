@@ -27,6 +27,7 @@ public class HandoverScreenUI : MonoBehaviour
     Button finishButton;
     Label summary;
     Label explanation;
+    VisualElement scoreBox;
     VisualElement diagnosisList;
     VisualElement cueList;
     bool buttonVisible;
@@ -55,14 +56,11 @@ public class HandoverScreenUI : MonoBehaviour
     {
         buttonVisible = visible;
         EnsureBound();
-        if (handoverButton != null)
-        {
-            handoverButton.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
-        }
+        ApplyButtonVisibility();
     }
 
-    /// <summary>Opens the comparison screen for the given report.</summary>
-    public void Show(HandoverReport report)
+    /// <summary>Opens the comparison screen for the given report and its score.</summary>
+    public void Show(HandoverReport report, ScoreBreakdown score)
     {
         EnsureBound();
         if (document == null)
@@ -74,6 +72,8 @@ public class HandoverScreenUI : MonoBehaviour
         summary.text = report.Summary;
         explanation.text = report.Explanation ?? string.Empty;
         explanation.style.display = string.IsNullOrWhiteSpace(report.Explanation) ? DisplayStyle.None : DisplayStyle.Flex;
+
+        BuildScore(score);
 
         diagnosisList.Clear();
         foreach (DiagnosisPriorityRow row in report.Diagnoses)
@@ -99,7 +99,7 @@ public class HandoverScreenUI : MonoBehaviour
         }
 
         screen.style.display = DisplayStyle.Flex;
-        handoverButton.style.display = DisplayStyle.None;
+        ApplyButtonVisibility();
     }
 
     public void Hide()
@@ -109,10 +109,42 @@ public class HandoverScreenUI : MonoBehaviour
             screen.style.display = DisplayStyle.None;
         }
 
-        if (handoverButton != null)
+        ApplyButtonVisibility();
+    }
+
+    void BuildScore(ScoreBreakdown score)
+    {
+        if (scoreBox == null)
         {
-            handoverButton.style.display = buttonVisible ? DisplayStyle.Flex : DisplayStyle.None;
+            return;
         }
+
+        scoreBox.Clear();
+        Label overall = new Label($"Score {score.Percent}%  -  {score.Level}");
+        overall.AddToClassList("handover-score-overall");
+        scoreBox.Add(overall);
+
+        VisualElement steps = new VisualElement();
+        steps.AddToClassList("handover-score-steps");
+        foreach (StepScore step in score.Steps)
+        {
+            VisualElement card = new VisualElement();
+            card.AddToClassList("handover-score-step");
+            card.AddToClassList($"handover-score-step--{step.Level.ToString().ToLowerInvariant()}");
+
+            Label name = new Label(step.Name);
+            name.AddToClassList("handover-score-step-name");
+            card.Add(name);
+            Label points = new Label($"{step.Points} / {step.MaxPoints}  -  {step.Level}");
+            points.AddToClassList("handover-score-step-points");
+            card.Add(points);
+            Label detail = new Label(step.Detail);
+            detail.AddToClassList("handover-score-step-detail");
+            card.Add(detail);
+            steps.Add(card);
+        }
+
+        scoreBox.Add(steps);
     }
 
     static string PlaceText(int expected, int yours, string where)
@@ -198,6 +230,7 @@ public class HandoverScreenUI : MonoBehaviour
         finishButton = root.Q<Button>("handover-finish");
         summary = root.Q<Label>("handover-summary");
         explanation = root.Q<Label>("handover-explanation");
+        scoreBox = root.Q<VisualElement>("handover-score");
         diagnosisList = root.Q<ScrollView>("handover-diagnoses")?.contentContainer;
         cueList = root.Q<ScrollView>("handover-cues")?.contentContainer;
 
@@ -206,6 +239,18 @@ public class HandoverScreenUI : MonoBehaviour
         if (finishButton != null) { finishButton.clicked += HandleFinish; }
 
         screen.style.display = DisplayStyle.None;
-        handoverButton.style.display = buttonVisible ? DisplayStyle.Flex : DisplayStyle.None;
+        ApplyButtonVisibility();
+    }
+
+    // the floating button never shows on top of the comparison screen
+    void ApplyButtonVisibility()
+    {
+        if (handoverButton == null)
+        {
+            return;
+        }
+
+        bool screenOpen = screen != null && screen.style.display.value == DisplayStyle.Flex;
+        handoverButton.style.display = buttonVisible && !screenOpen ? DisplayStyle.Flex : DisplayStyle.None;
     }
 }

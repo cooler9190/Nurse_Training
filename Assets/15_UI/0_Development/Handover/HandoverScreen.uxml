@@ -10,6 +10,7 @@
             </ui:VisualElement>
             <ui:Label name="handover-summary" text="" class="handover-summary" />
             <ui:Label name="handover-explanation" text="" class="handover-explanation" />
+            <ui:VisualElement name="handover-score" class="handover-score" />
             <ui:VisualElement class="handover-body">
                 <ui:VisualElement class="handover-column">
                     <ui:Label text="Diagnosis priorities" class="handover-column-title" />

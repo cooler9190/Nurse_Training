@@ -195,3 +195,63 @@
     font-size: 14px;
     white-space: normal;
 }
+
+.handover-score {
+    margin-bottom: 12px;
+}
+
+.handover-score-overall {
+    color: rgb(232, 244, 248);
+    font-size: 22px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.handover-score-steps {
+    flex-direction: row;
+}
+
+.handover-score-step {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 8px;
+    padding: 8px 10px;
+    background-color: rgba(18, 42, 58, 0.92);
+    border-radius: 6px;
+    border-left-width: 6px;
+    border-color: rgb(120, 130, 140);
+}
+
+.handover-score-step--developing {
+    border-color: rgb(214, 160, 40);
+}
+
+.handover-score-step--accomplished {
+    border-color: rgb(110, 170, 70);
+}
+
+.handover-score-step--exemplary {
+    border-color: rgb(44, 140, 96);
+}
+
+.handover-score-step--beginning {
+    border-color: rgb(196, 64, 56);
+}
+
+.handover-score-step-name {
+    color: rgb(232, 244, 248);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.handover-score-step-points {
+    color: rgb(170, 200, 212);
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.handover-score-step-detail {
+    color: rgb(170, 200, 212);
+    font-size: 12px;
+    white-space: normal;
+}
