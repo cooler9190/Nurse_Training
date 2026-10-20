@@ -4,7 +4,10 @@
         <ui:VisualElement class="hypothesis-header">
             <ui:Button name="back-button" text="Back" class="hypothesis-button" />
             <ui:Label text="Prioritise Hypotheses" class="hypothesis-title" />
-            <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary" />
+            <ui:VisualElement class="hypothesis-header-actions">
+                <ui:Button name="check-solution-button" text="Check (temp)" class="hypothesis-button" />
+                <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary" />
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="hypothesis-body">
             <ui:VisualElement name="ranking-zone" class="hypothesis-half ranking-zone">

@@ -13,6 +13,14 @@
     margin-bottom: 16px;
 }
 
+.hypothesis-header-actions {
+    flex-direction: row;
+}
+
+.hypothesis-header-actions > .hypothesis-button {
+    margin-left: 8px;
+}
+
 .hypothesis-title {
     color: rgb(232, 244, 248);
     font-size: 24px;
