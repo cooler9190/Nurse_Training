@@ -32,6 +32,8 @@ public class SO_Patient : ScriptableObject
     public List<AbcdeFinding> abcdeFindings = new List<AbcdeFinding>();
     /// <summary>Diagnoses the player can arrive at on the hypothesis screen, linked to the cues that support them.</summary>
     public List<Diagnosis> diagnoses = new List<Diagnosis>();
+    [Tooltip("Ids of the diagnoses the player should find, in the correct priority order (most urgent first). Diagnoses not listed here are distractors.")]
+    public List<string> solutionDiagnosisIds = new List<string>();
 
     /// <summary>Returns the finding for the given ABCDE step, or null if none is defined.</summary>
     public AbcdeFinding FindAbcdeFinding(AbcdeLetter letter)
@@ -104,6 +106,36 @@ public class SO_Patient : ScriptableObject
         WarnDuplicateIds(questions, "question", question => question != null ? question.id : null);
         WarnDuplicateIds(visualHotspots, "hotspot", hotspot => hotspot != null ? hotspot.id : null);
         WarnDuplicateIds(diagnoses, "diagnosis", diagnosis => diagnosis != null ? diagnosis.id : null);
+        WarnDuplicateIds(solutionDiagnosisIds, "solution diagnosis", id => id);
+        WarnUnknownSolutionIds();
+    }
+
+    void WarnUnknownSolutionIds()
+    {
+        if (solutionDiagnosisIds == null)
+        {
+            return;
+        }
+
+        HashSet<string> diagnosisIds = new HashSet<string>();
+        if (diagnoses != null)
+        {
+            foreach (Diagnosis diagnosis in diagnoses)
+            {
+                if (diagnosis != null && !string.IsNullOrWhiteSpace(diagnosis.id))
+                {
+                    diagnosisIds.Add(diagnosis.id);
+                }
+            }
+        }
+
+        foreach (string id in solutionDiagnosisIds)
+        {
+            if (!string.IsNullOrWhiteSpace(id) && !diagnosisIds.Contains(id))
+            {
+                Debug.LogWarning($"{name}: solution diagnosis id '{id}' does not match any diagnosis.", this);
+            }
+        }
     }
 
     void WarnDuplicateIds<T>(List<T> items, string label, Func<T, string> idSelector)
@@ -267,8 +299,9 @@ public class VisualHotspot
 
 /// <summary>
 /// A possible diagnosis for this patient. It shows up on the hypothesis screen when at least one
-/// of its <see cref="supportingCueIds"/> has been ranked by the player; its priority follows from
-/// how high those cues were ranked (see <c>DiagnosisRanker</c>).
+/// of its <see cref="supportingCueIds"/> has been ranked by the player (or all of them, when
+/// <see cref="requiresAllSupportingCues"/> is on); its priority follows from how high those cues
+/// were ranked (see <c>DiagnosisRanker</c>).
 /// </summary>
 [Serializable]
 public class Diagnosis
@@ -281,4 +314,6 @@ public class Diagnosis
     public string treatment;
     /// <summary>Cue ids that point towards this diagnosis.</summary>
     public List<string> supportingCueIds = new List<string>();
+    [Tooltip("If on, the diagnosis only unlocks once every supporting cue has been found and ranked.")]
+    public bool requiresAllSupportingCues;
 }
