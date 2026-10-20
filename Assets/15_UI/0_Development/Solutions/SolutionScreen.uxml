@@ -1,0 +1,23 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="SolutionScreen.uss" />
+    <ui:VisualElement name="solution-root" class="solution-root" picking-mode="Ignore">
+        <ui:Button name="entry-button" text="Generate solutions" class="solution-entry-button" />
+        <ui:VisualElement name="solution-screen" class="solution-screen">
+            <ui:VisualElement class="solution-header">
+                <ui:Button name="solution-back" text="Back" class="solution-button" />
+                <ui:Label text="Generate Solutions" class="solution-title" />
+                <ui:VisualElement class="solution-header-buttons">
+                    <ui:Button name="solution-retry" text="Try again" class="solution-button" />
+                    <ui:Button name="solution-check" text="Check solutions" class="solution-button solution-button--primary" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:Label name="solution-hint" text="" class="solution-hint" />
+            <ui:ScrollView name="solution-rows" class="solution-rows" />
+            <ui:VisualElement name="solution-hand-panel" class="solution-hand-panel">
+                <ui:Label text="Solutions" class="solution-hand-title" />
+                <ui:ScrollView name="solution-hand" class="solution-hand" />
+            </ui:VisualElement>
+            <ui:VisualElement name="solution-drag-layer" class="solution-drag-layer" picking-mode="Ignore" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

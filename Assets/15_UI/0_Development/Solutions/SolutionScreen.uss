@@ -1,0 +1,301 @@
+.solution-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Sits beside the hypothesis screen's Diagnose button */
+.solution-entry-button {
+    position: absolute;
+    top: 24px;
+    right: 160px;
+    width: 220px;
+    height: 44px;
+    margin: 0;
+    background-color: rgb(32, 120, 96);
+    color: rgb(245, 250, 252);
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+    display: none;
+}
+
+.solution-entry-button:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.solution-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 24px;
+    background-color: rgb(12, 30, 42);
+    display: none;
+}
+
+.solution-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.solution-header-buttons {
+    flex-direction: row;
+}
+
+.solution-title {
+    color: rgb(232, 244, 248);
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.solution-button {
+    width: 150px;
+    height: 44px;
+    margin: 0 0 0 8px;
+    background-color: rgb(18, 72, 92);
+    color: rgb(245, 250, 252);
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.solution-button:hover {
+    background-color: rgb(30, 96, 120);
+}
+
+.solution-button--primary {
+    background-color: rgb(32, 120, 96);
+}
+
+.solution-button--primary:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.solution-button:disabled {
+    opacity: 0.45;
+}
+
+.solution-hint {
+    color: rgb(170, 200, 212);
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 12px;
+}
+
+/* The bottom margin leaves room for the hand of solution cards. */
+.solution-rows {
+    flex-grow: 1;
+    margin-bottom: 290px;
+}
+
+.solution-row {
+    margin-bottom: 12px;
+    padding: 12px;
+    background-color: rgba(18, 42, 58, 0.92);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+}
+
+.solution-row--drop-target {
+    border-color: rgb(255, 210, 90);
+    background-color: rgba(40, 64, 80, 0.95);
+}
+
+.solution-row-header {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.solution-row-priority {
+    margin-right: 10px;
+    padding: 3px 8px;
+    background-color: rgb(196, 64, 56);
+    color: rgb(255, 255, 255);
+    font-size: 13px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+}
+
+.solution-row-title {
+    flex-shrink: 1;
+    color: rgb(232, 244, 248);
+    font-size: 18px;
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.solution-row-description {
+    color: rgb(170, 200, 212);
+    font-size: 13px;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.solution-row-drop {
+    min-height: 56px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 6px;
+    background-color: rgba(8, 20, 30, 0.55);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(122, 168, 186, 0.45);
+}
+
+.solution-row-drop--empty {
+    border-style: solid;
+    border-color: rgba(122, 168, 186, 0.3);
+}
+
+.solution-row-result {
+    margin-top: 8px;
+}
+
+.solution-result {
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+.solution-result-tag {
+    min-width: 70px;
+    margin-right: 8px;
+    padding: 2px 6px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    color: rgb(255, 255, 255);
+    border-radius: 4px;
+}
+
+.solution-result-text {
+    flex-shrink: 1;
+    flex-grow: 1;
+    color: rgb(232, 244, 248);
+    font-size: 14px;
+    white-space: normal;
+}
+
+.solution-result--right .solution-result-tag {
+    background-color: rgb(44, 140, 96);
+}
+
+.solution-result--wrong .solution-result-tag {
+    background-color: rgb(196, 64, 56);
+}
+
+.solution-result--missed .solution-result-tag {
+    background-color: rgb(196, 140, 36);
+}
+
+.solution-hand-panel {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 12px;
+    height: 270px;
+    padding: 10px 12px;
+    background-color: rgba(18, 42, 58, 0.96);
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.solution-hand-title {
+    color: rgb(170, 200, 212);
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.solution-hand {
+    flex-grow: 1;
+}
+
+.solution-drag-layer {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Solution cards */
+
+.solution-card {
+    width: 230px;
+    margin: 0 8px 8px 0;
+    padding: 10px;
+    background-color: rgb(236, 244, 247);
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+    flex-shrink: 0;
+}
+
+.solution-card:hover {
+    border-color: rgb(255, 210, 90);
+}
+
+.solution-card--placed {
+    width: auto;
+    margin: 0 8px 6px 0;
+    padding: 6px 10px;
+}
+
+.solution-card--selected {
+    border-color: rgb(30, 130, 190);
+    background-color: rgb(206, 230, 242);
+}
+
+.solution-card--dragging {
+    opacity: 0.3;
+}
+
+.solution-card--ghost {
+    position: absolute;
+    translate: -50% -50%;
+    rotate: 3deg;
+    opacity: 0.95;
+    border-color: rgb(255, 210, 90);
+}
+
+.solution-card--locked:hover {
+    border-color: rgb(122, 168, 186);
+}
+
+.solution-card--right {
+    background-color: rgb(214, 240, 224);
+    border-color: rgb(44, 140, 96);
+}
+
+.solution-card--wrong {
+    background-color: rgb(250, 222, 218);
+    border-color: rgb(196, 64, 56);
+}
+
+.solution-card-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+}
+
+.solution-card-description {
+    margin-top: 4px;
+    font-size: 13px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+}
