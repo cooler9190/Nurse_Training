@@ -103,7 +103,7 @@ public class HandoverFlow : MonoBehaviour
 
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
         handoverOpen = true;
-        handoverScreen.Show(report);
+        handoverScreen.Show(report, ScoreCalculator.Calculate(report));
     }
 
     void HandleHandoverClosed()
@@ -112,10 +112,9 @@ public class HandoverFlow : MonoBehaviour
         UpdateButton();
     }
 
+    // HandleInterviewEnded closes the screen and refreshes the button
     void HandleFinish()
     {
-        handoverOpen = false;
-        handoverScreen.Hide();
         controller.EndInterview();
     }
 
