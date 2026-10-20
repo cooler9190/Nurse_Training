@@ -23,7 +23,8 @@ public readonly struct RankedDiagnosis
 /// <summary>
 /// Turns the player's cue ranking into a prioritised list of diagnoses. Contains no UI code.
 /// <para>
-/// A diagnosis is included when at least one of its supporting cues was ranked. Diagnoses are
+/// A diagnosis is included when at least one of its supporting cues was ranked, or all of them
+/// when <see cref="Diagnosis.requiresAllSupportingCues"/> is on. Diagnoses are
 /// ordered by their best (highest) ranked supporting cue, then by how many of their supporting
 /// cues were ranked, then by the order they were authored in the patient asset.
 /// </para>
@@ -61,10 +62,18 @@ public static class DiagnosisRanker
                 .OrderBy(rank => rank)
                 .ToList();
 
-            if (ranks.Count > 0)
+            if (ranks.Count == 0)
             {
-                candidates.Add((diagnosis, ranks));
+                continue;
             }
+
+            if (diagnosis.requiresAllSupportingCues &&
+                ranks.Count < diagnosis.supportingCueIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().Count())
+            {
+                continue;
+            }
+
+            candidates.Add((diagnosis, ranks));
         }
 
         // OrderBy is stable, so ties keep the authoring order.

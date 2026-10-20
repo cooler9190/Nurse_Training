@@ -171,7 +171,8 @@ public class Patient : MonoBehaviour
             return;
         }
 
-        hypothesisScreen.Open(recognizedCues, profile != null ? profile.diagnoses : null);
+        hypothesisScreen.Open(recognizedCues, profile != null ? profile.diagnoses : null,
+            profile != null ? profile.solutionDiagnosisIds : null);
     }
 
     /// <summary>
