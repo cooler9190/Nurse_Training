@@ -12,6 +12,11 @@ using UnityEngine;
 /// <see cref="visualHotspots"/> on the portrait, and running ABCDE examinations
 /// (<see cref="abcdeFindings"/>). Hotspot regions can be edited visually with <c>SO_PatientEditor</c>.
 /// </para>
+/// <para>
+/// The correct answer used at hand over is also stored here: <see cref="solutionDiagnosisIds"/>,
+/// <see cref="correctCueOrder"/>, <see cref="prioritiesSummary"/> and each diagnosis's
+/// <see cref="Diagnosis.priorityReason"/> (see <c>PriorityEvaluator</c>).
+/// </para>
 /// </summary>
 [CreateAssetMenu(fileName = "SO_Patient", menuName = "Scriptable Objects/Patient")]
 public class SO_Patient : ScriptableObject
@@ -34,6 +39,75 @@ public class SO_Patient : ScriptableObject
     public List<Diagnosis> diagnoses = new List<Diagnosis>();
     [Tooltip("Ids of the diagnoses the player should find, in the correct priority order (most urgent first). Diagnoses not listed here are distractors.")]
     public List<string> solutionDiagnosisIds = new List<string>();
+    [Tooltip("Cue ids, most urgent first, with the reason each sits where it does. Shown at hand over. Only the relative order matters, so cues the player never found are skipped.")]
+    public List<CuePriority> correctCueOrder = new List<CuePriority>();
+    [TextArea(2, 6)]
+    [Tooltip("A short explanation of the whole ordering. Shown at hand over.")]
+    public string prioritiesSummary;
+
+    /// <summary>True when a correct order has been authored, so the patient can be handed over.</summary>
+    public bool HasPriorities =>
+        (solutionDiagnosisIds != null && solutionDiagnosisIds.Count > 0) ||
+        (correctCueOrder != null && correctCueOrder.Count > 0);
+
+    /// <summary>
+    /// Returns the title of the cue with the given id as awarded by a question, hotspot or ABCDE finding,
+    /// or null if nothing awards it. Used for cues the player has not found yet.
+    /// </summary>
+    public string FindCueTitle(string cueId)
+    {
+        if (string.IsNullOrEmpty(cueId))
+        {
+            return null;
+        }
+
+        foreach (RecognizedCue cue in AwardedCues())
+        {
+            if (cue.Id == cueId)
+            {
+                return cue.Title;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>Every cue this patient can award, in authoring order (duplicates included).</summary>
+    IEnumerable<RecognizedCue> AwardedCues()
+    {
+        if (questions != null)
+        {
+            foreach (InterviewQuestion question in questions)
+            {
+                if (question != null && question.awardsCue)
+                {
+                    yield return question.ToCue();
+                }
+            }
+        }
+
+        if (visualHotspots != null)
+        {
+            foreach (VisualHotspot hotspot in visualHotspots)
+            {
+                if (hotspot != null)
+                {
+                    yield return hotspot.ToCue();
+                }
+            }
+        }
+
+        if (abcdeFindings != null)
+        {
+            foreach (AbcdeFinding finding in abcdeFindings)
+            {
+                if (finding != null && finding.awardsCue)
+                {
+                    yield return finding.ToCue();
+                }
+            }
+        }
+    }
 
     /// <summary>Returns the finding for the given ABCDE step, or null if none is defined.</summary>
     public AbcdeFinding FindAbcdeFinding(AbcdeLetter letter)
@@ -107,7 +181,31 @@ public class SO_Patient : ScriptableObject
         WarnDuplicateIds(visualHotspots, "hotspot", hotspot => hotspot != null ? hotspot.id : null);
         WarnDuplicateIds(diagnoses, "diagnosis", diagnosis => diagnosis != null ? diagnosis.id : null);
         WarnDuplicateIds(solutionDiagnosisIds, "solution diagnosis", id => id);
+        WarnDuplicateIds(correctCueOrder, "correct cue order", cue => cue != null ? cue.id : null);
         WarnUnknownSolutionIds();
+        WarnUnknownCueOrderIds();
+    }
+
+    void WarnUnknownCueOrderIds()
+    {
+        if (correctCueOrder == null)
+        {
+            return;
+        }
+
+        HashSet<string> awardedIds = new HashSet<string>();
+        foreach (RecognizedCue cue in AwardedCues())
+        {
+            awardedIds.Add(cue.Id);
+        }
+
+        foreach (CuePriority cue in correctCueOrder)
+        {
+            if (cue != null && !string.IsNullOrWhiteSpace(cue.id) && !awardedIds.Contains(cue.id))
+            {
+                Debug.LogWarning($"{name}: correct cue order id '{cue.id}' is not awarded by any question, hotspot or finding.", this);
+            }
+        }
     }
 
     void WarnUnknownSolutionIds()
@@ -316,4 +414,16 @@ public class Diagnosis
     public List<string> supportingCueIds = new List<string>();
     [Tooltip("If on, the diagnosis only unlocks once every supporting cue has been found and ranked.")]
     public bool requiresAllSupportingCues;
+    [TextArea(1, 4)]
+    [Tooltip("Why this diagnosis sits where it does in the solution order. Shown at hand over.")]
+    public string priorityReason;
+}
+
+/// <summary>One cue in the patient's correct cue order, with the reason it sits where it does.</summary>
+[Serializable]
+public class CuePriority
+{
+    public string id;
+    [TextArea(1, 4)]
+    public string reason;
 }
