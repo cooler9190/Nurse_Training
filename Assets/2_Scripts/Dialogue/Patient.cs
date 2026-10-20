@@ -35,6 +35,7 @@ public class Patient : MonoBehaviour
 
     readonly List<RecognizedCue> recognizedCues = new List<RecognizedCue>();
     readonly HashSet<string> recognizedIds = new HashSet<string>();
+    PatientProgress progress;
 
     public SO_Patient Profile => profile;
     /// <summary>Cues found so far, in the order they were discovered.</summary>
@@ -88,9 +89,26 @@ public class Patient : MonoBehaviour
         recognizedCues.Clear();
         recognizedIds.Clear();
 
+        // Bring back what the player already found with this patient
+        progress = PatientProgressStore.Get(profile);
+        for (int i = 0; i < progress.cues.Count; i++)
+        {
+            RecognizedCue saved = progress.cues[i].ToCue();
+            if (!string.IsNullOrEmpty(saved.Id) && recognizedIds.Add(saved.Id))
+            {
+                recognizedCues.Add(saved);
+            }
+        }
+
         if (interviewUI != null)
         {
             interviewUI.BeginPatient(profile);
+            for (int i = 0; i < progress.foundHotspotIds.Count; i++)
+            {
+                interviewUI.MarkHotspotFound(progress.foundHotspotIds[i]);
+            }
+
+            interviewUI.SetCueCount(recognizedCues.Count);
         }
 
         if (hypothesisScreen != null)
@@ -173,11 +191,15 @@ public class Patient : MonoBehaviour
             interviewUI.MarkHotspotFound(hotspotId);
         }
 
-        if (!TryRecognize(hotspot.ToCue()))
+        if (progress != null && !progress.foundHotspotIds.Contains(hotspotId))
         {
-            return;
+            progress.foundHotspotIds.Add(hotspotId);
+            PatientProgressStore.Save();
         }
 
+        TryRecognize(hotspot.ToCue());
+
+        // Unlock even if the cue was already earned from a question with the same cue id
         if (interviewController != null)
         {
             interviewController.UnlockQuestions(hotspot.unlocksQuestionIds);
@@ -196,6 +218,12 @@ public class Patient : MonoBehaviour
         }
 
         recognizedCues.Add(cue);
+        if (progress != null)
+        {
+            progress.cues.Add(new SavedCue(cue));
+            PatientProgressStore.Save();
+        }
+
         Debug.Log($"Cue recognized: {cue.Id}");
         OnCueRecognized?.Invoke(cue);
 

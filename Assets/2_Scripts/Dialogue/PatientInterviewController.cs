@@ -47,6 +47,9 @@ public class PatientInterviewController : MonoBehaviour
     bool skipRequested;
     bool warnedMissingVoice;
     EventInstance patientVoice;
+    PatientProgress progress;
+    string pendingQuestionId;
+    int pendingExamination = -1;
 
     public bool IsPlaying => isPlaying;
 
@@ -100,6 +103,24 @@ public class PatientInterviewController : MonoBehaviour
         warnedMissingVoice = false;
         isPlaying = true;
         isBusy = false;
+        pendingQuestionId = null;
+        pendingExamination = -1;
+
+        // Resume where the player left off with this patient
+        progress = PatientProgressStore.Get(interview);
+        askedIds.UnionWith(progress.askedQuestionIds);
+        // Keep the saved order so follow-ups stay under the question that unlocked them
+        for (int i = 0; i < progress.unlockedQuestionIds.Count; i++)
+        {
+            if (!unlockedIds.Contains(progress.unlockedQuestionIds[i]))
+            {
+                unlockedIds.Add(progress.unlockedQuestionIds[i]);
+            }
+        }
+        for (int i = 0; i < progress.examinedLetters.Count; i++)
+        {
+            examined[(int)progress.examinedLetters[i]] = true;
+        }
 
         if (interview.questions != null)
         {
@@ -113,10 +134,22 @@ public class PatientInterviewController : MonoBehaviour
             }
         }
 
+        // A previous interview may have ended mid-line, leaving the questions disabled
+        interviewUI.SetQuestionsEnabled(true);
         interviewUI.SetVisible(true);
         interviewUI.SetSpeakerName(interview.patientDisplayName);
-        interviewUI.SetDialogueText($"Select a question to ask {interview.patientDisplayName}.");
+        interviewUI.SetDialogueText(progress.HasProgress
+            ? $"Welcome back. Continue your conversation with {interview.patientDisplayName}."
+            : $"Select a question to ask {interview.patientDisplayName}.");
         RefreshQuestions();
+        for (int i = 0; i < examined.Length; i++)
+        {
+            if (examined[i])
+            {
+                interviewUI.SetAbcdeExamined((AbcdeLetter)i);
+            }
+        }
+
         OnInterviewStarted?.Invoke();
     }
 
@@ -127,6 +160,21 @@ public class PatientInterviewController : MonoBehaviour
         {
             return;
         }
+
+        // An exchange cut short doesn't count, otherwise its cue would be lost for good
+        if (pendingQuestionId != null)
+        {
+            askedIds.Remove(pendingQuestionId);
+            pendingQuestionId = null;
+        }
+
+        if (pendingExamination >= 0)
+        {
+            examined[pendingExamination] = false;
+            pendingExamination = -1;
+        }
+
+        SaveProgress();
 
         StopAllCoroutines();
         StopPatientVoice();
@@ -191,6 +239,7 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         askedIds.Add(questionId);
+        pendingQuestionId = questionId;
         StartCoroutine(PlayExchange(question));
     }
 
@@ -221,6 +270,8 @@ public class PatientInterviewController : MonoBehaviour
 
         AwardCueIfNeeded(question);
         UnlockFollowUps(question);
+        pendingQuestionId = null;
+        SaveProgress();
         isBusy = false;
         interviewUI.SetQuestionsEnabled(true);
         RefreshQuestions();
@@ -235,6 +286,7 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         examined[(int)letter] = true;
+        pendingExamination = (int)letter;
         StartCoroutine(PlayExamination(letter));
     }
 
@@ -263,6 +315,8 @@ public class PatientInterviewController : MonoBehaviour
         }
 
         interviewUI.SetAbcdeExamined(letter);
+        pendingExamination = -1;
+        SaveProgress();
         isBusy = false;
         interviewUI.SetQuestionsEnabled(true);
     }
@@ -321,8 +375,32 @@ public class PatientInterviewController : MonoBehaviour
 
         if (changed)
         {
+            SaveProgress();
             RefreshQuestions();
         }
+    }
+
+    void SaveProgress()
+    {
+        if (progress == null)
+        {
+            return;
+        }
+
+        progress.askedQuestionIds.Clear();
+        progress.askedQuestionIds.AddRange(askedIds);
+        progress.unlockedQuestionIds.Clear();
+        progress.unlockedQuestionIds.AddRange(unlockedIds);
+        progress.examinedLetters.Clear();
+        for (int i = 0; i < examined.Length; i++)
+        {
+            if (examined[i])
+            {
+                progress.examinedLetters.Add((AbcdeLetter)i);
+            }
+        }
+
+        PatientProgressStore.Save();
     }
 
     void AwardCueIfNeeded(InterviewQuestion question)

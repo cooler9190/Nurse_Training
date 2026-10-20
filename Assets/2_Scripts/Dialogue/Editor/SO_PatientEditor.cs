@@ -219,6 +219,9 @@ public class SO_PatientEditor : Editor
     void BeginDrag(int controlId, DragMode mode, int index, SerializedProperty hotspots, Vector2 mousePosition)
     {
         GUIUtility.hotControl = controlId;
+        // Start a fresh group so one Ctrl+Z undoes exactly this drag
+        Undo.IncrementCurrentGroup();
+        Undo.SetCurrentGroupName(mode == DragMode.Move ? "Move Hotspot" : "Resize Hotspot");
         undoGroup = Undo.GetCurrentGroup();
         dragMode = mode;
         dragIndex = index;
