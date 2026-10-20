@@ -4,7 +4,8 @@ using UnityEngine;
 
 /// <summary>
 /// The correct priorities for one patient, which the hand over compares with what the player ranked: the order
-/// of the cues and of the diagnoses, with the reason each one sits where it does. Kept as its own asset so the
+/// of the cues, with the reason each cue and diagnosis sits where it does. The diagnosis order itself is the
+/// patient's <see cref="SO_Patient.solutionDiagnosisIds"/>. Kept as its own asset so the
 /// patient and diagnosis data stay untouched. Create one via
 /// <c>Assets &gt; Create &gt; Scriptable Objects &gt; Priorities</c>.
 /// <para>
@@ -19,8 +20,6 @@ public class SO_Priorities : ScriptableObject
     public SO_Patient patient;
     [Tooltip("Cue ids, most urgent first. Only the relative order matters, so cues the player never found are skipped.")]
     public List<string> correctCueOrder = new List<string>();
-    [Tooltip("Diagnosis ids, most urgent first. Diagnoses left out here are distractors.")]
-    public List<string> correctDiagnosisOrder = new List<string>();
     [Tooltip("Why each cue sits where it does. Shown at hand over.")]
     public List<PriorityNote> cueNotes = new List<PriorityNote>();
     [Tooltip("Why each diagnosis sits where it does. Shown at hand over.")]

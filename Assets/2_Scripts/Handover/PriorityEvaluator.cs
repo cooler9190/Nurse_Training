@@ -74,8 +74,8 @@ public class HandoverReport
 /// </summary>
 public static class PriorityEvaluator
 {
-    /// <param name="diagnosisOrder">The patient's own solution order; when empty the priorities asset's order is used.</param>
-    public static HandoverReport Evaluate(SO_Priorities set, IReadOnlyList<RecognizedCue> collected, IReadOnlyList<string> rankedIds, IReadOnlyList<Diagnosis> diagnoses, IReadOnlyList<string> diagnosisOrder = null)
+    /// <param name="diagnosisOrder">The patient's solution order (<see cref="SO_Patient.solutionDiagnosisIds"/>), most urgent first.</param>
+    public static HandoverReport Evaluate(SO_Priorities set, IReadOnlyList<RecognizedCue> collected, IReadOnlyList<string> rankedIds, IReadOnlyList<Diagnosis> diagnoses, IReadOnlyList<string> diagnosisOrder)
     {
         HandoverReport report = new HandoverReport { Explanation = set.prioritiesSummary };
         Dictionary<string, RecognizedCue> collectedById = new Dictionary<string, RecognizedCue>();
@@ -88,8 +88,7 @@ public static class PriorityEvaluator
         List<string> playerCues = rankedIds.Where(id => collectedById.ContainsKey(id)).Distinct().ToList();
         report.NothingRanked = playerCues.Count == 0;
 
-        IReadOnlyList<string> order = diagnosisOrder != null && diagnosisOrder.Count > 0 ? diagnosisOrder : set.correctDiagnosisOrder;
-        BuildDiagnosisRows(report, set, order, playerCues.Select(id => collectedById[id]).ToList(), diagnoses);
+        BuildDiagnosisRows(report, set, diagnosisOrder ?? new List<string>(), playerCues.Select(id => collectedById[id]).ToList(), diagnoses);
         BuildCueRows(report, set, collectedById, playerCues);
         report.Summary = BuildSummary(report, set);
         return report;
