@@ -4,8 +4,9 @@ using UnityEngine;
 /// Connects the interview to the hand over without changing it. The Hand over button is shown while an
 /// interview is running (not while the hypothesis screen or the hand over itself covers it). Pressing it reads
 /// the player's current cue ranking from <see cref="HypothesisScreenUI"/>, builds the comparison with
-/// <see cref="PriorityEvaluator"/> against the patient's <see cref="SO_Priorities"/> and shows it. Finish case
-/// ends the interview, which sends the player back to the map. Patients without a priorities asset get no button.
+/// <see cref="PriorityEvaluator"/> against the correct order authored on the patient's <see cref="SO_Patient"/>
+/// and shows it. Finish case ends the interview, which sends the player back to the map. Patients without
+/// authored priorities (<see cref="SO_Patient.HasPriorities"/>) get no button.
 /// Missing references are looked up in the scene.
 /// </summary>
 public class HandoverFlow : MonoBehaviour
@@ -15,8 +16,6 @@ public class HandoverFlow : MonoBehaviour
     [SerializeField] PatientInterviewUI interviewUI;
     [SerializeField] HypothesisScreenUI hypothesisScreen;
     [SerializeField] HandoverScreenUI handoverScreen;
-    [Tooltip("One asset per patient. The one whose patient is being played is used.")]
-    [SerializeField] SO_Priorities[] prioritySets;
 
     bool interviewActive;
     bool hypothesisOpen;
@@ -97,13 +96,12 @@ public class HandoverFlow : MonoBehaviour
 
     void HandleHandover()
     {
-        SO_Priorities set = FindSet();
-        if (set == null)
+        if (!HasPriorities())
         {
             return;
         }
 
-        HandoverReport report = PriorityEvaluator.Evaluate(set, patient.RecognizedCues, hypothesisScreen.RankedCueIds, patient.Profile.diagnoses, patient.Profile.solutionDiagnosisIds);
+        HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
         handoverOpen = true;
         handoverScreen.Show(report);
     }
@@ -123,24 +121,11 @@ public class HandoverFlow : MonoBehaviour
 
     void UpdateButton()
     {
-        handoverScreen.SetButtonVisible(interviewActive && !hypothesisOpen && !handoverOpen && FindSet() != null);
+        handoverScreen.SetButtonVisible(interviewActive && !hypothesisOpen && !handoverOpen && HasPriorities());
     }
 
-    SO_Priorities FindSet()
+    bool HasPriorities()
     {
-        if (patient == null || patient.Profile == null)
-        {
-            return null;
-        }
-
-        for (int i = 0; prioritySets != null && i < prioritySets.Length; i++)
-        {
-            if (prioritySets[i] != null && prioritySets[i].patient == patient.Profile)
-            {
-                return prioritySets[i];
-            }
-        }
-
-        return null;
+        return patient != null && patient.Profile != null && patient.Profile.HasPriorities;
     }
 }

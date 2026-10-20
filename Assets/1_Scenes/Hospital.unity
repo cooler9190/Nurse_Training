@@ -17599,8 +17599,6 @@ MonoBehaviour:
   interviewUI: {fileID: 700000004}
   hypothesisScreen: {fileID: 2200000004}
   handoverScreen: {fileID: 2400000004}
-  prioritySets:
-  - {fileID: 11400000, guid: 5c9a062844704c37a850d098cc701601, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -7,7 +7,8 @@ using UnityEngine.UIElements;
 /// The hand over: a floating Hand over button on the interview screen, and a full-screen comparison of the
 /// player's priorities with the correct ones. Diagnoses and cues each get a row that says whether the player put
 /// them in the right place, where they belong and why. It holds no game logic: <see cref="HandoverFlow"/> decides
-/// when the button shows and builds the <see cref="HandoverReport"/> with <see cref="PriorityEvaluator"/>.
+/// when the button shows and builds the <see cref="HandoverReport"/> with <see cref="PriorityEvaluator"/> from the
+/// patient's <see cref="SO_Patient"/>.
 /// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class HandoverScreenUI : MonoBehaviour
@@ -84,7 +85,9 @@ public class HandoverScreenUI : MonoBehaviour
         {
             string note = distractor.RankedFirst
                 ? "Your top priority, but the cues you ranked do not support it."
-                : "On your list, but the cues you ranked do not support it.";
+                : distractor.InSolutionSlot
+                    ? "Ranked above a real diagnosis, but the cues you ranked do not support it."
+                    : "On your list, but the cues you ranked do not support it.";
             diagnosisList.Add(BuildRow(PriorityVerdict.Wrong, distractor.Title, "Not a priority here", note, "Not supported"));
         }
 
