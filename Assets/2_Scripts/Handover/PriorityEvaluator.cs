@@ -74,7 +74,8 @@ public class HandoverReport
 /// </summary>
 public static class PriorityEvaluator
 {
-    public static HandoverReport Evaluate(SO_Priorities set, IReadOnlyList<RecognizedCue> collected, IReadOnlyList<string> rankedIds, IReadOnlyList<Diagnosis> diagnoses)
+    /// <param name="diagnosisOrder">The patient's own solution order; when empty the priorities asset's order is used.</param>
+    public static HandoverReport Evaluate(SO_Priorities set, IReadOnlyList<RecognizedCue> collected, IReadOnlyList<string> rankedIds, IReadOnlyList<Diagnosis> diagnoses, IReadOnlyList<string> diagnosisOrder = null)
     {
         HandoverReport report = new HandoverReport { Explanation = set.prioritiesSummary };
         Dictionary<string, RecognizedCue> collectedById = new Dictionary<string, RecognizedCue>();
@@ -87,21 +88,22 @@ public static class PriorityEvaluator
         List<string> playerCues = rankedIds.Where(id => collectedById.ContainsKey(id)).Distinct().ToList();
         report.NothingRanked = playerCues.Count == 0;
 
-        BuildDiagnosisRows(report, set, playerCues.Select(id => collectedById[id]).ToList(), diagnoses);
+        IReadOnlyList<string> order = diagnosisOrder != null && diagnosisOrder.Count > 0 ? diagnosisOrder : set.correctDiagnosisOrder;
+        BuildDiagnosisRows(report, set, order, playerCues.Select(id => collectedById[id]).ToList(), diagnoses);
         BuildCueRows(report, set, collectedById, playerCues);
         report.Summary = BuildSummary(report, set);
         return report;
     }
 
-    static void BuildDiagnosisRows(HandoverReport report, SO_Priorities set, List<RecognizedCue> rankedCues, IReadOnlyList<Diagnosis> diagnoses)
+    static void BuildDiagnosisRows(HandoverReport report, SO_Priorities set, IReadOnlyList<string> order, List<RecognizedCue> rankedCues, IReadOnlyList<Diagnosis> diagnoses)
     {
         List<RankedDiagnosis> player = DiagnosisRanker.Rank(rankedCues, diagnoses);
-        HashSet<string> expectedIds = new HashSet<string>(set.correctDiagnosisOrder);
+        HashSet<string> expectedIds = new HashSet<string>(order);
         List<RankedDiagnosis> realOnPlayerList = player.Where(d => expectedIds.Contains(d.Diagnosis.id)).ToList();
 
-        for (int i = 0; i < set.correctDiagnosisOrder.Count; i++)
+        for (int i = 0; i < order.Count; i++)
         {
-            string id = set.correctDiagnosisOrder[i];
+            string id = order[i];
             int index = realOnPlayerList.FindIndex(d => d.Diagnosis.id == id);
             Diagnosis diagnosis = diagnoses?.FirstOrDefault(d => d.id == id);
             report.Diagnoses.Add(new DiagnosisPriorityRow

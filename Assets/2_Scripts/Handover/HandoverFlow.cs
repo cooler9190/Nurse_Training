@@ -103,7 +103,7 @@ public class HandoverFlow : MonoBehaviour
             return;
         }
 
-        HandoverReport report = PriorityEvaluator.Evaluate(set, patient.RecognizedCues, hypothesisScreen.RankedCueIds, patient.Profile.diagnoses);
+        HandoverReport report = PriorityEvaluator.Evaluate(set, patient.RecognizedCues, hypothesisScreen.RankedCueIds, patient.Profile.diagnoses, patient.Profile.solutionDiagnosisIds);
         handoverOpen = true;
         handoverScreen.Show(report);
     }
