@@ -11,7 +11,7 @@ using UnityEngine;
 /// <para>
 /// How it works: the UI (<see cref="PatientInterviewUI"/>) only reports clicks; this controller
 /// decides what happens. When the player picks a question, the player's line is shown briefly,
-/// then the patient's reply is typed out letter by letter while an FMOD voice event plays.
+/// then the patient's reply is typed out letter by letter with an FMOD voice blip every few characters.
 /// Clicking the dialogue panel skips ahead. After the reply, the question's cue (if any) is
 /// raised through <see cref="OnCueRecognized"/> and its follow-up questions are unlocked.
 /// Only one exchange can run at a time; input is disabled while <c>isBusy</c> is true.
@@ -30,8 +30,8 @@ public class PatientInterviewController : MonoBehaviour
 
     [SerializeField] PatientInterviewUI interviewUI;
     [SerializeField] string playerDisplayName = "You";
-    [Tooltip("Seconds between each typed character of the patient's reply.")]
-    [SerializeField] float textSpeed = 0.02f;
+    [Tooltip("Scales every patient's text speed. 1 uses the patient's own speed, 2 types twice as slowly, 0.5 twice as fast.")]
+    [SerializeField, Range(0.25f, 4f)] float textSpeedMultiplier = 1f;
     [Tooltip("Seconds the player's question stays on screen before the patient starts answering.")]
     [SerializeField] float playerLineHold = 0.35f;
 
@@ -46,7 +46,6 @@ public class PatientInterviewController : MonoBehaviour
     bool isBusy;
     bool skipRequested;
     bool warnedMissingVoice;
-    EventInstance patientVoice;
     PatientProgress progress;
     string pendingQuestionId;
     int pendingExamination = -1;
@@ -69,7 +68,6 @@ public class PatientInterviewController : MonoBehaviour
     void OnDisable()
     {
         SubscribeUi(false);
-        StopPatientVoice();
     }
 
     /// <summary>
@@ -177,7 +175,6 @@ public class PatientInterviewController : MonoBehaviour
         SaveProgress();
 
         StopAllCoroutines();
-        StopPatientVoice();
         isPlaying = false;
         isBusy = false;
         interview = null;
@@ -322,18 +319,18 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Typewriter effect: reveals <paramref name="line"/> one character every <c>textSpeed</c> seconds.
+    /// Typewriter effect: reveals <paramref name="line"/> one character every <c>SO_Patient.textSpeed</c>
+    /// seconds, scaled by <c>textSpeedMultiplier</c>.
     /// Uses unscaled/realtime timing so it still works when the game is paused (timeScale 0).
-    /// A skip request shows the full line immediately.
+    /// A skip request shows the full line immediately. When <paramref name="playVoice"/> is true, a voice
+    /// blip plays every <c>SO_Patient.charactersPerVoiceBlip</c> characters, so the sound follows the text speed.
     /// </summary>
     IEnumerator TypePatientLine(string line, bool playVoice = true)
     {
         string text = line ?? string.Empty;
         interviewUI.SetDialogueText(string.Empty);
-        if (playVoice)
-        {
-            StartPatientVoice();
-        }
+        float characterDelay = interview.textSpeed * textSpeedMultiplier;
+        int blipInterval = Mathf.Max(1, interview.charactersPerVoiceBlip);
 
         for (int i = 0; i < text.Length; i++)
         {
@@ -344,11 +341,15 @@ public class PatientInterviewController : MonoBehaviour
             }
 
             interviewUI.SetDialogueText(text.Substring(0, i + 1));
-            yield return new WaitForSecondsRealtime(textSpeed);
+            yield return new WaitForSecondsRealtime(characterDelay);
+
+            if (playVoice && i % blipInterval == 0)
+            {
+                PlayVoiceBlip();
+            }
         }
 
         interviewUI.SetDialogueText(text);
-        StopPatientVoice();
         skipRequested = false;
     }
 
@@ -468,12 +469,11 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Creates and starts a new FMOD instance of the patient's dialogue event. A missing or invalid
-    /// event is reported only once per interview so the console isn't flooded.
+    /// Plays one short, fire-and-forget instance of the patient's dialogue event. FMOD frees it once
+    /// it finishes. A missing or invalid event is reported only once per interview so the console isn't flooded.
     /// </summary>
-    void StartPatientVoice()
+    void PlayVoiceBlip()
     {
-        StopPatientVoice();
         if (interview == null || interview.patientDialogueEvent.IsNull)
         {
             if (!warnedMissingVoice)
@@ -486,8 +486,8 @@ public class PatientInterviewController : MonoBehaviour
             return;
         }
 
-        patientVoice = RuntimeManager.CreateInstance(interview.patientDialogueEvent);
-        if (!patientVoice.isValid())
+        EventInstance blip = RuntimeManager.CreateInstance(interview.patientDialogueEvent);
+        if (!blip.isValid())
         {
             if (!warnedMissingVoice)
             {
@@ -498,19 +498,8 @@ public class PatientInterviewController : MonoBehaviour
             return;
         }
 
-        patientVoice.start();
-    }
-
-    /// <summary>Fades out and releases the current voice instance, if any.</summary>
-    void StopPatientVoice()
-    {
-        if (!patientVoice.isValid())
-        {
-            return;
-        }
-
-        patientVoice.stop(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
-        patientVoice.release();
-        patientVoice.clearHandle();
+        blip.setPitch(interview.dialoguePitch);
+        blip.start();
+        blip.release();
     }
 }

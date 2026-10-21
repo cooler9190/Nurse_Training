@@ -27,6 +27,15 @@ public class SO_Patient : ScriptableObject
     public Sprite patientPortrait;
     /// <summary>FMOD event played while the patient's reply is being typed out (e.g. mumbling voice).</summary>
     public EventReference patientDialogueEvent;
+    [Tooltip("Pitch multiplier for this patient's dialogue voice. 1 is unchanged, below 1 is deeper, above 1 is higher.")]
+    [Range(0.5f, 2f)]
+    public float dialoguePitch = 1f;
+    [Tooltip("Seconds between each typed character of this patient's replies. Lower is faster.")]
+    [Range(0.005f, 0.1f)]
+    public float textSpeed = 0.02f;
+    [Tooltip("Play a voice blip every N typed characters.")]
+    [Min(1)]
+    public int charactersPerVoiceBlip = 3;
     /// <summary>Background information shown in the patient folder (age, allergies, notes...).</summary>
     public PatientChart chart = new PatientChart();
     /// <summary>All questions the player can ask, including follow-ups that start locked.</summary>

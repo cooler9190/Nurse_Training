@@ -79,6 +79,11 @@ public class HypothesisScreenUI : MonoBehaviour
             backButton.clicked -= Close;
         }
 
+        if (document != null)
+        {
+            GameAudio.UnregisterButtonClicks(document.rootVisualElement);
+        }
+
         document = null;
     }
 
@@ -168,6 +173,7 @@ public class HypothesisScreenUI : MonoBehaviour
             backButton.clicked += Close;
         }
 
+        GameAudio.RegisterButtonClicks(root);
         SetVisible(isOpen);
     }
 
