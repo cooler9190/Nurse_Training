@@ -34,6 +34,7 @@ public class PatientInterviewUI : MonoBehaviour
     const int AbcdeCount = 5;
 
     UIDocument document;
+    VisualElement documentRoot;
     VisualElement root;
     VisualElement portraitFrame;
     VisualElement portrait;
@@ -447,6 +448,8 @@ public class PatientInterviewUI : MonoBehaviour
             return;
         }
 
+        documentRoot = bindRoot;
+        GameAudio.RegisterButtonClicks(documentRoot);
         root = bindRoot.Q<VisualElement>("patient-interview") ?? bindRoot;
         portraitFrame = bindRoot.Q<VisualElement>("portrait-frame");
         portrait = bindRoot.Q<VisualElement>("portrait");
@@ -538,6 +541,8 @@ public class PatientInterviewUI : MonoBehaviour
             portraitFrame.UnregisterCallback<GeometryChangedEvent>(HandlePortraitFrameGeometryChanged);
         }
 
+        GameAudio.UnregisterButtonClicks(documentRoot);
+        documentRoot = null;
         root = null;
         portraitFrame = null;
         portrait = null;

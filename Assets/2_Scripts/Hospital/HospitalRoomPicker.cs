@@ -85,6 +85,7 @@ public class HospitalRoomPicker : MonoBehaviour
 
     void Select(PatientRoom room)
     {
+        GameAudio.PlayClick();
         if (!room.HasPatient)
         {
             ShowNotice($"{room.RoomName}: no patient assigned yet.");

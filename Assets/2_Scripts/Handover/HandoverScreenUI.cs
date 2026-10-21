@@ -48,6 +48,7 @@ public class HandoverScreenUI : MonoBehaviour
         if (handoverButton != null) { handoverButton.clicked -= HandleHandover; }
         if (backButton != null) { backButton.clicked -= Close; }
         if (finishButton != null) { finishButton.clicked -= HandleFinish; }
+        if (document != null) { GameAudio.UnregisterButtonClicks(document.rootVisualElement); }
         document = null;
     }
 
@@ -237,6 +238,7 @@ public class HandoverScreenUI : MonoBehaviour
         if (handoverButton != null) { handoverButton.clicked += HandleHandover; }
         if (backButton != null) { backButton.clicked += Close; }
         if (finishButton != null) { finishButton.clicked += HandleFinish; }
+        GameAudio.RegisterButtonClicks(root);
 
         screen.style.display = DisplayStyle.None;
         ApplyButtonVisibility();
