@@ -41,14 +41,12 @@ public class HypothesisScreenUI : MonoBehaviour
     Label rankingHint;
     Label diagnosisHint;
     Button diagnoseButton;
-    Button checkSolutionButton;
     Button backButton;
 
     readonly List<string> rankedIds = new List<string>();
     readonly List<CueCard> rankedCards = new List<CueCard>();
     readonly List<CueCard> handCards = new List<CueCard>();
     IReadOnlyList<Diagnosis> diagnoses;
-    IReadOnlyList<string> solutionIds;
     CueCard hoveredCard;
     CueCard dragCard;
     CueCard dragGhost;
@@ -76,14 +74,14 @@ public class HypothesisScreenUI : MonoBehaviour
             diagnoseButton.clicked -= Diagnose;
         }
 
-        if (checkSolutionButton != null)
-        {
-            checkSolutionButton.clicked -= CheckSolution;
-        }
-
         if (backButton != null)
         {
             backButton.clicked -= Close;
+        }
+
+        if (document != null)
+        {
+            GameAudio.UnregisterButtonClicks(document.rootVisualElement);
         }
 
         document = null;
@@ -91,11 +89,9 @@ public class HypothesisScreenUI : MonoBehaviour
 
     /// <summary>
     /// Shows the screen with the given cues. Cues that were ranked before keep their place in the
-    /// ranking; all others are dealt into the hand. <paramref name="solutionDiagnosisIds"/> is the
-    /// correct diagnosis order used by the Check button.
+    /// ranking; all others are dealt into the hand.
     /// </summary>
-    public void Open(IReadOnlyList<RecognizedCue> cues, IReadOnlyList<Diagnosis> patientDiagnoses,
-        IReadOnlyList<string> solutionDiagnosisIds = null)
+    public void Open(IReadOnlyList<RecognizedCue> cues, IReadOnlyList<Diagnosis> patientDiagnoses)
     {
         EnsureBound();
         if (document == null)
@@ -105,7 +101,6 @@ public class HypothesisScreenUI : MonoBehaviour
         }
 
         diagnoses = patientDiagnoses;
-        solutionIds = solutionDiagnosisIds;
         rankedCards.Clear();
         handCards.Clear();
         hoveredCard = null;
@@ -166,7 +161,6 @@ public class HypothesisScreenUI : MonoBehaviour
         rankingHint = root.Q<Label>("ranking-hint");
         diagnosisHint = root.Q<Label>("diagnosis-hint");
         diagnoseButton = root.Q<Button>("diagnose-button");
-        checkSolutionButton = root.Q<Button>("check-solution-button");
         backButton = root.Q<Button>("back-button");
 
         if (diagnoseButton != null)
@@ -174,16 +168,12 @@ public class HypothesisScreenUI : MonoBehaviour
             diagnoseButton.clicked += Diagnose;
         }
 
-        if (checkSolutionButton != null)
-        {
-            checkSolutionButton.clicked += CheckSolution;
-        }
-
         if (backButton != null)
         {
             backButton.clicked += Close;
         }
 
+        GameAudio.RegisterButtonClicks(root);
         SetVisible(isOpen);
     }
 
@@ -416,27 +406,6 @@ public class HypothesisScreenUI : MonoBehaviour
         List<RankedDiagnosis> results = DiagnosisRanker.Rank(rankedCards.Select(card => card.Cue).ToList(), diagnoses);
         ShowDiagnoses(results);
         OnDiagnosed?.Invoke(results);
-    }
-
-    /// <summary>Temporary: logs whether the current ranking yields the patient's solution diagnoses in the right order.</summary>
-    void CheckSolution()
-    {
-        if (solutionIds == null || solutionIds.Count == 0)
-        {
-            Debug.LogWarning("HypothesisScreenUI: this patient has no solution diagnoses authored.", this);
-            return;
-        }
-
-        List<RankedDiagnosis> results = DiagnosisRanker.Rank(rankedCards.Select(card => card.Cue).ToList(), diagnoses);
-        DiagnosisCheckResult check = DiagnosisSolutionChecker.Check(results, solutionIds);
-        if (check.IsCorrect)
-        {
-            Debug.Log(check.ToReport(), this);
-        }
-        else
-        {
-            Debug.LogWarning(check.ToReport(), this);
-        }
     }
 
     /// <summary>Shows the diagnosis cards, or the hint text when <paramref name="results"/> is null.</summary>

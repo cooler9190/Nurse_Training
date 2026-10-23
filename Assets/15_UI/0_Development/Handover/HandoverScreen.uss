@@ -1,0 +1,257 @@
+.handover-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Top centre of the interview, in the gap between the portrait and the question list */
+.handover-button {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    width: 180px;
+    height: 44px;
+    margin: 0 0 0 -90px;
+    background-color: rgb(32, 120, 96);
+    color: rgb(245, 250, 252);
+    font-size: 16px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+    display: none;
+}
+
+.handover-button:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.handover-screen {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    padding: 24px;
+    background-color: rgb(12, 30, 42);
+    display: none;
+}
+
+.handover-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.handover-title {
+    color: rgb(232, 244, 248);
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.handover-action {
+    width: 140px;
+    height: 44px;
+    margin: 0;
+    background-color: rgb(18, 72, 92);
+    color: rgb(245, 250, 252);
+    font-size: 15px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.handover-action:hover {
+    background-color: rgb(30, 96, 120);
+}
+
+.handover-action--primary {
+    background-color: rgb(32, 120, 96);
+}
+
+.handover-action--primary:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.handover-summary {
+    color: rgb(232, 244, 248);
+    font-size: 18px;
+    -unity-font-style: bold;
+    white-space: normal;
+    margin-bottom: 6px;
+}
+
+.handover-explanation {
+    color: rgb(170, 200, 212);
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 12px;
+}
+
+.handover-body {
+    flex-grow: 1;
+    flex-direction: row;
+}
+
+.handover-column {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin: 0 8px;
+    padding: 14px;
+    background-color: rgba(18, 42, 58, 0.92);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+}
+
+.handover-column-title {
+    color: rgb(232, 244, 248);
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+.handover-list {
+    flex-grow: 1;
+}
+
+.handover-row {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background-color: rgb(246, 250, 252);
+    border-radius: 6px;
+    border-left-width: 6px;
+    border-color: rgb(122, 168, 186);
+    flex-shrink: 0;
+}
+
+.handover-row--correct {
+    border-color: rgb(44, 140, 96);
+}
+
+.handover-row--nearlythere {
+    border-color: rgb(214, 160, 40);
+}
+
+.handover-row--wrong {
+    border-color: rgb(196, 64, 56);
+}
+
+.handover-row--missing {
+    border-color: rgb(120, 130, 140);
+}
+
+.handover-row-top {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.handover-row-tag {
+    margin-right: 10px;
+    padding: 2px 8px;
+    min-width: 92px;
+    -unity-text-align: middle-center;
+    color: rgb(255, 255, 255);
+    font-size: 12px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    background-color: rgb(120, 130, 140);
+}
+
+.handover-row--correct .handover-row-tag {
+    background-color: rgb(44, 140, 96);
+}
+
+.handover-row--nearlythere .handover-row-tag {
+    background-color: rgb(214, 160, 40);
+}
+
+.handover-row--wrong .handover-row-tag {
+    background-color: rgb(196, 64, 56);
+}
+
+.handover-row-title {
+    flex-shrink: 1;
+    color: rgb(18, 56, 74);
+    font-size: 16px;
+    -unity-font-style: bold;
+    white-space: normal;
+}
+
+.handover-row-detail {
+    color: rgb(60, 78, 90);
+    font-size: 13px;
+    white-space: normal;
+}
+
+.handover-row-reason {
+    margin-top: 4px;
+    color: rgb(28, 40, 48);
+    font-size: 14px;
+    white-space: normal;
+}
+
+.handover-score {
+    margin-bottom: 12px;
+}
+
+.handover-score-overall {
+    color: rgb(232, 244, 248);
+    font-size: 22px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.handover-score-steps {
+    flex-direction: row;
+}
+
+.handover-score-step {
+    flex-grow: 1;
+    flex-basis: 0;
+    margin-right: 8px;
+    padding: 8px 10px;
+    background-color: rgba(18, 42, 58, 0.92);
+    border-radius: 6px;
+    border-left-width: 6px;
+    border-color: rgb(120, 130, 140);
+}
+
+.handover-score-step--developing {
+    border-color: rgb(214, 160, 40);
+}
+
+.handover-score-step--accomplished {
+    border-color: rgb(110, 170, 70);
+}
+
+.handover-score-step--exemplary {
+    border-color: rgb(44, 140, 96);
+}
+
+.handover-score-step--beginning {
+    border-color: rgb(196, 64, 56);
+}
+
+.handover-score-step-name {
+    color: rgb(232, 244, 248);
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.handover-score-step-points {
+    color: rgb(170, 200, 212);
+    font-size: 13px;
+    margin-bottom: 2px;
+}
+
+.handover-score-step-detail {
+    color: rgb(170, 200, 212);
+    font-size: 12px;
+    white-space: normal;
+}
