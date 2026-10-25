@@ -4,7 +4,7 @@
         <ui:Image name="Background" source="project://database/Assets/9_Sprites/1_UI/Characters/HospitalBackground.png?fileID=21300000&amp;guid=4ee0804ede0f41842932213df0c14741&amp;type=3#HospitalBackground" scale-mode="StretchToFill" style="position: absolute; height: 1084px; width: 1929px; top: -5px; left: -3px;"/>
         <ui:VisualElement name="upper-row" class="upper-row">
             <ui:VisualElement name="question-panel" class="question-panel">
-                <ui:Label text="Questions" class="panel-title"/>
+                <ui:Label text="Questions" class="panel-title" style="color: rgb(3, 113, 127); font-size: 25px; -unity-font-style: bold;"/>
                 <ui:ScrollView name="question-list" class="question-list"/>
             </ui:VisualElement>
         </ui:VisualElement>
@@ -13,20 +13,21 @@
         </ui:VisualElement>
         <ui:VisualElement name="cue-bar" class="cue-bar">
             <ui:Button name="cue-inventory-button" text="Cues (0)" class="cue-inventory-button"/>
-            <ui:VisualElement name="abcde-bar" class="abcde-bar">
-                <ui:Button name="abcde-0" text="A" class="abcde-button"/>
-                <ui:Button name="abcde-1" text="B" class="abcde-button"/>
-                <ui:Button name="abcde-2" text="C" class="abcde-button"/>
-                <ui:Button name="abcde-3" text="D" class="abcde-button"/>
-                <ui:Button name="abcde-4" text="E" class="abcde-button"/>
-            </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="dialogue-panel" class="dialogue-panel">
-            <ui:VisualElement class="dialogue-header">
-                <ui:Label name="speaker-name" text="Patient" class="speaker-name"/>
-                <ui:Button name="done-button" text="Done" class="done-button"/>
+        <ui:VisualElement name="dialogue-panel" class="dialogue-panel" style="height: 250px; width: 1293px; padding-left: 70px; padding-top: 35px; padding-right: 90px; padding-bottom: 50px;">
+            <ui:VisualElement class="dialogue-header" style="top: -55px; width: 1220px; left: 89px;">
+                <ui:Image source="project://database/Assets/9_Sprites/1_UI/DialogueTitleBox.png?fileID=21300000&amp;guid=f5c45b39b018ccf469b078c2a2c0b2b0&amp;type=3#DialogueTitleBox" style="position: absolute; height: 83px; top: -19px; width: 272px;"/>
+                <ui:Label name="speaker-name" text="Patient" class="speaker-name" style="left: 42px; color: rgb(255, 255, 255);"/>
+                <ui:Button name="done-button" text="Done" class="done-button" style="top: -33px; right: 132px;"/>
             </ui:VisualElement>
-            <ui:Label name="dialogue-text" text="" class="dialogue-text"/>
+            <ui:Label name="dialogue-text" text="" class="dialogue-text" style="top: -38px;"/>
+        </ui:VisualElement>
+        <ui:VisualElement name="abcde-bar" class="abcde-bar" style="position: absolute; right: 115px; bottom: 130px;">
+            <ui:Button name="abcde-0" text="A" class="abcde-button"/>
+            <ui:Button name="abcde-1" text="B" class="abcde-button"/>
+            <ui:Button name="abcde-2" text="C" class="abcde-button"/>
+            <ui:Button name="abcde-3" text="D" class="abcde-button"/>
+            <ui:Button name="abcde-4" text="E" class="abcde-button"/>
         </ui:VisualElement>
         <ui:VisualElement name="patient-folder" class="patient-folder">
             <ui:VisualElement name="folder-panel" class="folder-panel">

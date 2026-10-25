@@ -3,7 +3,9 @@
     <ui:VisualElement name="hypothesis-screen" class="hypothesis-screen" style="background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/BaseBackground.png?fileID=21300000&amp;guid=11b3bbe1d4a3f5c4f9ac1aea2fd415e3&amp;type=3#BaseBackground&quot;);">
         <ui:VisualElement class="hypothesis-header">
             <ui:Button name="back-button" text="Back" class="hypothesis-button"/>
-            <ui:Label text="Prioritise Hypotheses" class="hypothesis-title"/>
+            <ui:Image source="project://database/Assets/9_Sprites/1_UI/TitleBox.png?fileID=21300000&amp;guid=9f1c27e3e1e587f4aa1a9f306ddaed88&amp;type=3#TitleBox" style="width: 344px;">
+                <ui:Label text="Prioritise Hypotheses" class="hypothesis-title"/>
+            </ui:Image>
             <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary"/>
         </ui:VisualElement>
         <ui:VisualElement class="hypothesis-body">

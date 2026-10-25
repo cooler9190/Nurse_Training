@@ -17,23 +17,34 @@
     color: rgb(232, 244, 248);
     font-size: 24px;
     -unity-font-style: bold;
+    -unity-text-align: upper-center;
+    align-items: stretch;
 }
 
 .hypothesis-button {
     width: 120px;
     height: 44px;
     margin: 0;
-    background-color: rgb(18, 72, 92);
+    background-color: rgb(3, 113, 127);
     color: rgb(245, 250, 252);
     font-size: 15px;
     -unity-font-style: bold;
     border-radius: 4px;
     border-width: 1px;
     border-color: rgb(122, 168, 186);
+    border-left-color: rgb(0, 0, 0);
+    border-right-color: rgb(0, 0, 0);
+    border-top-color: rgb(0, 0, 0);
+    border-bottom-color: rgb(0, 0, 0);
+    border-top-width: 2px;
+    border-right-width: 2px;
+    border-bottom-width: 2px;
+    border-left-width: 2px;
 }
 
 .hypothesis-button:hover {
-    background-color: rgb(30, 96, 120);
+    background-color: rgb(50, 255, 215);
+    color: rgb(0, 0, 0);
 }
 
 .hypothesis-button--primary {
@@ -41,14 +52,13 @@
 }
 
 .hypothesis-button--primary:hover {
-    background-color: rgb(44, 146, 118);
+    background-color: rgb(44, 255, 143);
 }
 
 .hypothesis-button:disabled {
     opacity: 0.45;
 }
 
-/* Bottom margin leaves room for the hand of cards. */
 .hypothesis-body {
     flex-grow: 1;
     flex-direction: row;
@@ -67,10 +77,20 @@
 
 .ranking-zone {
     margin-right: 12px;
+    background-color: rgba(0, 42, 49, 0.588);
+    border-left-color: rgb(16, 32, 30);
+    border-right-color: rgb(16, 32, 30);
+    border-top-color: rgb(16, 32, 30);
+    border-bottom-color: rgb(16, 32, 30);
 }
 
 .diagnosis-zone {
     margin-left: 12px;
+    background-color: rgba(0, 43, 50, 0.588);
+    border-left-color: rgb(16, 32, 30);
+    border-right-color: rgb(16, 32, 30);
+    border-top-color: rgb(16, 32, 30);
+    border-bottom-color: rgb(16, 32, 30);
 }
 
 .ranking-zone--drop-target {
@@ -113,8 +133,6 @@
     bottom: 0;
 }
 
-/* Cue cards */
-
 .cue-card {
     padding: 10px;
     background-color: rgb(236, 244, 247);
@@ -136,10 +154,13 @@
     transition-timing-function: ease-out-cubic;
 }
 
-/* Scales up from the bottom edge only: lifting the card would uncover the spot under the pointer and make hover flicker. */
 .cue-card--hovered {
     scale: 1.5 1.5;
     border-color: rgb(255, 210, 90);
+    border-left-color: rgb(53, 234, 198);
+    border-right-color: rgb(53, 234, 198);
+    border-top-color: rgb(53, 234, 198);
+    border-bottom-color: rgb(53, 234, 198);
 }
 
 .cue-card--ranked {
@@ -220,8 +241,6 @@
     color: rgb(80, 104, 116);
     white-space: normal;
 }
-
-/* Diagnosis cards */
 
 .diagnosis-card {
     margin-bottom: 10px;
