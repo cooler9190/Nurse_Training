@@ -1,24 +1,24 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
-    <ui:Style src="HypothesisScreen.uss" />
-    <ui:VisualElement name="hypothesis-screen" class="hypothesis-screen">
+    <Style src="project://database/Assets/15_UI/0_Development/Hypothesis/HypothesisScreen.uss?fileID=7433441132597879392&amp;guid=87453b93bb3b8434e9c7b2aa4a103b2a&amp;type=3#HypothesisScreen"/>
+    <ui:VisualElement name="hypothesis-screen" class="hypothesis-screen" style="background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/BaseBackground.png?fileID=21300000&amp;guid=11b3bbe1d4a3f5c4f9ac1aea2fd415e3&amp;type=3#BaseBackground&quot;);">
         <ui:VisualElement class="hypothesis-header">
-            <ui:Button name="back-button" text="Back" class="hypothesis-button" />
-            <ui:Label text="Prioritise Hypotheses" class="hypothesis-title" />
-            <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary" />
+            <ui:Button name="back-button" text="Back" class="hypothesis-button"/>
+            <ui:Label text="Prioritise Hypotheses" class="hypothesis-title"/>
+            <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary"/>
         </ui:VisualElement>
         <ui:VisualElement class="hypothesis-body">
             <ui:VisualElement name="ranking-zone" class="hypothesis-half ranking-zone">
-                <ui:Label text="Rank by severity and urgency" class="hypothesis-panel-title" />
-                <ui:Label name="ranking-hint" text="Drag cue cards here. Put the most severe and urgent cue at the top." class="hypothesis-hint" />
-                <ui:ScrollView name="ranking-list" class="ranking-list" />
+                <ui:Label text="Rank by severity and urgency" class="hypothesis-panel-title"/>
+                <ui:Label name="ranking-hint" text="Drag cue cards here. Put the most severe and urgent cue at the top." class="hypothesis-hint"/>
+                <ui:ScrollView name="ranking-list" class="ranking-list"/>
             </ui:VisualElement>
             <ui:VisualElement name="diagnosis-zone" class="hypothesis-half diagnosis-zone">
-                <ui:Label text="Diagnoses" class="hypothesis-panel-title" />
-                <ui:Label name="diagnosis-hint" text="Rank your cues, then press Diagnose." class="hypothesis-hint" />
-                <ui:ScrollView name="diagnosis-list" class="diagnosis-list" />
+                <ui:Label text="Diagnoses" class="hypothesis-panel-title"/>
+                <ui:Label name="diagnosis-hint" text="Rank your cues, then press Diagnose." class="hypothesis-hint"/>
+                <ui:ScrollView name="diagnosis-list" class="diagnosis-list"/>
             </ui:VisualElement>
         </ui:VisualElement>
-        <ui:VisualElement name="hand" class="hand" picking-mode="Ignore" />
-        <ui:VisualElement name="drag-layer" class="drag-layer" picking-mode="Ignore" />
+        <ui:VisualElement name="hand" picking-mode="Ignore" class="hand"/>
+        <ui:VisualElement name="drag-layer" picking-mode="Ignore" class="drag-layer"/>
     </ui:VisualElement>
 </ui:UXML>

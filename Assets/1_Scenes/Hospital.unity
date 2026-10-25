@@ -12930,7 +12930,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   interviewUI: {fileID: 700000004}
   playerDisplayName: You
-  textSpeed: 0.02
+  textSpeedMultiplier: 1
   playerLineHold: 0.35
 --- !u!114 &700000006
 MonoBehaviour:
@@ -12947,7 +12947,7 @@ MonoBehaviour:
   interviewController: {fileID: 700000005}
   interviewUI: {fileID: 700000004}
   hypothesisScreen: {fileID: 2200000004}
-  profile: {fileID: 0}
+  profile: {fileID: 11400000, guid: 5e2a9c6d0f7b1a4c6e9d1f3a5b8c0d81, type: 2}
   startOnPlay: 0
 --- !u!1 &700000010
 GameObject:

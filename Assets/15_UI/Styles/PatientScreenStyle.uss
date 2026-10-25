@@ -1,0 +1,58 @@
+:root {
+}
+
+.Button {
+    border-top-width: 5px;
+    border-right-width: 5px;
+    border-bottom-width: 5px;
+    border-left-width: 5px;
+    border-left-color: rgb(0, 0, 0);
+    border-right-color: rgb(0, 0, 0);
+    border-top-color: rgb(0, 0, 0);
+    border-bottom-color: rgb(0, 0, 0);
+    background-color: rgb(0, 168, 167);
+    font-size: 20px;
+    background-size: 147px 100px;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-bottom-left-radius: 10px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.Button:hover {
+    background-color: rgb(0, 255, 177);
+    -unity-background-image-tint-color: rgb(0, 249, 255);
+    border-top-width: 5px;
+    border-right-width: 5px;
+    border-bottom-width: 5px;
+    border-left-width: 5px;
+    color: rgb(0, 81, 107);
+}
+
+.QuestionButton {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/QuestionBox.png?fileID=21300000&guid=f11126fe26a795c4990452380c007ca5&type=3#QuestionBox");
+    width: 455px;
+    height: 65px;
+    padding-right: 326px;
+    padding-left: 20px;
+    -unity-text-align: upper-left;
+}
+
+.QuestionButton:hover {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/QuestionBoxSelect.png?fileID=21300000&guid=649590305d6ca30488da3dcbb98301cb&type=3#QuestionBoxSelect");
+}
+
+.ABCButton {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&guid=810bbe7e7359f0e4ab0688edf2ea28c3&type=3#ABCOption");
+    background-color: rgba(58, 121, 187, 0);
+    padding-top: 14px;
+    width: 188px;
+    height: 44px;
+    -unity-font-style: bold-and-italic;
+}
+
+.ABCButton:hover {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/ABCSelect.png?fileID=21300000&guid=a1608fc452d6ba8438aa652709d32480&type=3#ABCSelect");
+}

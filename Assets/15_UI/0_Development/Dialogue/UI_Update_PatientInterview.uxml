@@ -1,36 +1,44 @@
 <ui:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
-    <ui:Image name="PatientPortrait" source="project://database/Assets/9_Sprites/0_Development/man_1.png?fileID=21300000&amp;guid=38408cb776de43d479c4d806ea2f3e6e&amp;type=3#man_1" scale-mode="ScaleToFit" style="align-self: flex-end; height: 1001px; position: absolute; left: 20%; align-content: flex-end; bottom: 2px; right: 0%;"/>
+    <Style src="project://database/Assets/15_UI/Styles/PatientScreenStyle.uss?fileID=7433441132597879392&amp;guid=02398dab7d8d7aa40aaaf9196de5b0b5&amp;type=3#PatientScreenStyle"/>
+    <ui:Image name="PatientPortrait" source="project://database/Assets/9_Sprites/1_UI/Characters/Character_1.png?fileID=21300000&amp;guid=11f8017411c02b04a9e8d6232337e745&amp;type=3#Character_1" scale-mode="ScaleToFit" style="align-self: flex-end; height: 1001px; position: absolute; left: -908px; align-content: flex-end; bottom: 2px; right: 144px;"/>
     <ui:VisualElement name="Container" style="flex-grow: 1; border-top-width: 40px; border-right-width: 40px; border-bottom-width: 40px; border-left-width: 40px; top: auto;">
         <ui:VisualElement name="Questions" style="flex-grow: 1; width: 487px; height: 2201px; top: 0%; left: auto; bottom: auto; right: auto;">
             <ui:Label text="Questions:" style="font-size: 25px; -unity-font-style: bold;"/>
-            <ui:Button text="Option 1&#10;Yes" style="background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/QuestionBox.png?fileID=21300000&amp;guid=f11126fe26a795c4990452380c007ca5&amp;type=3#QuestionBox&quot;); background-color: rgba(188, 188, 188, 0); height: 65px; width: 455px; -unity-text-align: middle-left; padding-left: 38px; padding-right: 62px;"/>
-            <ui:Button text="Option 2&#10;No" style="background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/QuestionBox.png?fileID=21300000&amp;guid=f11126fe26a795c4990452380c007ca5&amp;type=3#QuestionBox&quot;); background-color: rgba(188, 188, 188, 0); height: 65px; width: 455px; -unity-text-align: middle-left; padding-left: 38px; padding-right: 62px;"/>
-            <ui:Button text="Option 3&#10;Maybe" style="background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/QuestionBox.png?fileID=21300000&amp;guid=f11126fe26a795c4990452380c007ca5&amp;type=3#QuestionBox&quot;); background-color: rgba(188, 188, 188, 0); height: 65px; width: 455px; -unity-text-align: middle-left; padding-left: 38px; padding-right: 62px;"/>
+            <ui:Button text="Button" name="QuestionButton" class="QuestionButton" style="padding-left: 38px; padding-right: 62px;"/>
+            <ui:Button text="Button" name="QuestionButton" class="QuestionButton" style="padding-left: 38px; padding-right: 62px;"/>
+            <ui:Button text="Button" name="QuestionButton" class="QuestionButton" style="padding-left: 38px; padding-right: 62px;"/>
         </ui:VisualElement>
         <ui:VisualElement name="Dialogue" style="flex-grow: 1; width: 1535px; height: 278px; position: absolute; top: auto; bottom: 0;">
-            <ui:Image name="DialogueBox" source="project://database/Assets/9_Sprites/1_UI/DialogueBox.png?fileID=21300000&amp;guid=525b5044d8f101542ae01d64049f2d3f&amp;type=3#DialogueBox" style="justify-content: flex-end; bottom: 0; left: 0; width: 1263px; height: 405px;"/>
+            <ui:Image name="DialogueBox" source="project://database/Assets/9_Sprites/1_UI/DialogueBox.png?fileID=21300000&amp;guid=525b5044d8f101542ae01d64049f2d3f&amp;type=3#DialogueBox" style="justify-content: flex-end; bottom: 0; left: 0; width: 1263px; height: 405px;">
+                <ui:Label text="Placeholder Text" name="Label" style="position: absolute; top: 20%; left: 7%; width: 1076px; height: 147px; color: rgb(255, 255, 255); font-size: 20px;"/>
+            </ui:Image>
             <ui:Image name="DialogueTitle" source="project://database/Assets/9_Sprites/1_UI/DialogueTitleBox.png?fileID=21300000&amp;guid=f5c45b39b018ccf469b078c2a2c0b2b0&amp;type=3#DialogueTitleBox" style="justify-content: flex-end; bottom: 72%; left: 7%; width: 311px; height: 87px; position: absolute; margin-bottom: 23px;">
                 <ui:Label text="Name" name="Name" style="bottom: 0%; left: 10%; right: 30%; top: -32%; font-size: 30px; -unity-font-style: bold; color: rgb(255, 255, 255); margin-bottom: 0; padding-bottom: 0;"/>
             </ui:Image>
+            <ui:Button text="Done" name="Button" class="Button" style="background-size: 100px 100px; position: absolute; right: -2%; bottom: 125%; width: 114px; top: auto;"/>
+            <ui:Button text="Cues" name="Button" class="Button" style="position: absolute; bottom: 125%; width: 143px; left: 2%;"/>
         </ui:VisualElement>
     </ui:VisualElement>
     <ui:Image name="ABCBox" source="project://database/Assets/9_Sprites/1_UI/NotepadBox.png?fileID=2800000&amp;guid=58ec0aed6810a1e479c5fd517c26b710&amp;type=3#NotepadBox" style="position: absolute; bottom: 0%; right: 3%; width: 376px; height: 366px;">
         <ui:VisualElement name="ButtonOptions" style="flex-grow: 1;">
-            <ui:Button text="Airway" name="Airway" style="align-self: center; width: 188px; height: 44px; bottom: -94px; right: -10px; background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&amp;guid=810bbe7e7359f0e4ab0688edf2ea28c3&amp;type=3#ABCOption&quot;); background-color: rgba(188, 188, 188, 0); padding-top: 14px; -unity-font-style: bold-and-italic;">
+            <ui:Button text="Airway" name="Airway" class="ABCButton" style="bottom: -94px; right: -100px;">
                 <ui:Label text="A" name="A" style="left: 0%; bottom: 8px; font-size: 20px; -unity-font-style: bold; color: rgb(255, 255, 255); width: 16px; height: 19px;"/>
             </ui:Button>
-            <ui:Button text="Breathing" name="Breathing" style="align-self: center; width: 188px; height: 44px; bottom: -94px; right: 0; background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&amp;guid=810bbe7e7359f0e4ab0688edf2ea28c3&amp;type=3#ABCOption&quot;); background-color: rgba(188, 188, 188, 0); padding-top: 14px; -unity-font-style: bold-and-italic;">
+            <ui:Button text="Breathing" name="Breathing" class="ABCButton" style="bottom: -94px; right: -90px;">
                 <ui:Label text="B" name="B" style="left: 0%; bottom: 8px; font-size: 20px; -unity-font-style: bold; color: rgb(255, 255, 255); width: 16px; height: 19px;"/>
             </ui:Button>
-            <ui:Button text="Circulation" name="Circulation" style="align-self: center; width: 188px; height: 44px; bottom: -94px; right: 10px; background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&amp;guid=810bbe7e7359f0e4ab0688edf2ea28c3&amp;type=3#ABCOption&quot;); background-color: rgba(188, 188, 188, 0); padding-top: 14px; -unity-font-style: bold-and-italic;">
+            <ui:Button text="Circulation" name="Circulation" class="ABCButton" style="bottom: -94px; right: -80px;">
                 <ui:Label text="C" name="C" style="left: 0%; bottom: 8px; font-size: 20px; -unity-font-style: bold; color: rgb(255, 255, 255); width: 16px; height: 19px;"/>
             </ui:Button>
-            <ui:Button text="Disability" name="Disability" style="align-self: center; width: 188px; height: 44px; bottom: -94px; right: 20px; background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&amp;guid=810bbe7e7359f0e4ab0688edf2ea28c3&amp;type=3#ABCOption&quot;); background-color: rgba(188, 188, 188, 0); padding-top: 14px; -unity-font-style: bold-and-italic;">
+            <ui:Button text="Disability" name="Disability" class="ABCButton" style="bottom: -94px; right: -70px;">
                 <ui:Label text="D" name="D" style="left: 0%; bottom: 8px; font-size: 20px; -unity-font-style: bold; color: rgb(255, 255, 255); width: 16px; height: 19px;"/>
             </ui:Button>
-            <ui:Button text="Exposure" name="Exposure" style="align-self: center; width: 188px; height: 44px; bottom: -94px; right: 30px; background-image: url(&quot;project://database/Assets/9_Sprites/1_UI/ABCOption.png?fileID=21300000&amp;guid=810bbe7e7359f0e4ab0688edf2ea28c3&amp;type=3#ABCOption&quot;); background-color: rgba(188, 188, 188, 0); padding-top: 14px; -unity-font-style: bold-and-italic;">
+            <ui:Button text="Exposure" name="Exposure" class="ABCButton" style="bottom: -94px; right: -60px;">
                 <ui:Label text="E" name="E" style="left: 0%; bottom: 8px; font-size: 20px; -unity-font-style: bold; color: rgb(255, 255, 255); width: 16px; height: 19px;"/>
             </ui:Button>
         </ui:VisualElement>
+    </ui:Image>
+    <ui:Image source="project://database/Assets/9_Sprites/1_UI/FilesBox.png?fileID=21300000&amp;guid=64e008107c7ad6f4ca27057517c17c98&amp;type=3#FilesBox" name="DataPatient" style="position: absolute; align-self: flex-end; top: 66px; right: -259px; height: 505px; width: 345px;">
+        <ui:Button text="Patient File" class="Button" style="width: 143px; rotate: 270deg; left: -37px; top: 98px;"/>
     </ui:Image>
 </ui:UXML>
