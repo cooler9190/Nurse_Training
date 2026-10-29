@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -39,7 +40,11 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked += HandleHypothesisOpened; }
-        if (hypothesisScreen != null) { hypothesisScreen.OnClosed += HandleHypothesisClosed; }
+        if (hypothesisScreen != null)
+        {
+            hypothesisScreen.OnClosed += HandleHypothesisClosed;
+            hypothesisScreen.OnHandoverRequested += HandleHandover;
+        }
         if (handoverScreen != null)
         {
             handoverScreen.OnHandoverClicked += HandleHandover;
@@ -57,7 +62,11 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked -= HandleHypothesisOpened; }
-        if (hypothesisScreen != null) { hypothesisScreen.OnClosed -= HandleHypothesisClosed; }
+        if (hypothesisScreen != null)
+        {
+            hypothesisScreen.OnClosed -= HandleHypothesisClosed;
+            hypothesisScreen.OnHandoverRequested -= HandleHandover;
+        }
         if (handoverScreen != null)
         {
             handoverScreen.OnHandoverClicked -= HandleHandover;
@@ -103,7 +112,7 @@ public class HandoverFlow : MonoBehaviour
 
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
         handoverOpen = true;
-        handoverScreen.Show(report, ScoreCalculator.Calculate(report));
+        handoverScreen.Show(report, ScoreCalculator.Calculate(report, UnsharedDiagnoses(report)));
     }
 
     void HandleHandoverClosed()
@@ -126,5 +135,33 @@ public class HandoverFlow : MonoBehaviour
     bool HasPriorities()
     {
         return patient != null && patient.Profile != null && patient.Profile.HasPriorities;
+    }
+
+    /// <summary>Titles of diagnoses on the player's list that have a talk and were not shared.</summary>
+    List<string> UnsharedDiagnoses(HandoverReport report)
+    {
+        List<string> titles = new List<string>();
+        if (hypothesisScreen == null || report.PlayerDiagnoses == null)
+        {
+            return titles;
+        }
+
+        foreach (RankedDiagnosis ranked in report.PlayerDiagnoses)
+        {
+            Diagnosis diagnosis = ranked.Diagnosis;
+            if (diagnosis == null || diagnosis.sharedDecision == null || !diagnosis.sharedDecision.HasScript)
+            {
+                continue;
+            }
+
+            if (hypothesisScreen.IsShared(diagnosis.id))
+            {
+                continue;
+            }
+
+            titles.Add(string.IsNullOrEmpty(diagnosis.title) ? diagnosis.id : diagnosis.title);
+        }
+
+        return titles;
     }
 }

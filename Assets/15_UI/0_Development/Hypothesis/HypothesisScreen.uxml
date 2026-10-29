@@ -4,9 +4,13 @@
         <ui:VisualElement class="hypothesis-header">
             <ui:Button name="back-button" text="Back" class="hypothesis-button"/>
             <ui:Image source="project://database/Assets/9_Sprites/1_UI/TitleBox.png?fileID=21300000&amp;guid=9f1c27e3e1e587f4aa1a9f306ddaed88&amp;type=3#TitleBox" style="width: 344px;">
-                <ui:Label text="Prioritise Hypotheses" class="hypothesis-title"/>
+                <ui:Label name="hypothesis-title" text="Prioritise Hypotheses" class="hypothesis-title"/>
             </ui:Image>
-            <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary"/>
+            <ui:VisualElement name="header-actions" class="header-actions">
+                <ui:Button name="revise-button" text="Revise priorities" class="hypothesis-button hypothesis-button--wide" style="display: none;"/>
+                <ui:Button name="share-handover-button" text="Hand over" class="hypothesis-button hypothesis-button--primary" style="display: none;"/>
+                <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary"/>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement class="hypothesis-body">
             <ui:VisualElement name="ranking-zone" class="hypothesis-half ranking-zone">
@@ -19,8 +23,27 @@
                 <ui:Label name="diagnosis-hint" text="Rank your cues, then press Diagnose." class="hypothesis-hint"/>
                 <ui:ScrollView name="diagnosis-list" class="diagnosis-list"/>
             </ui:VisualElement>
+            <ui:VisualElement name="patient-drop" class="patient-drop" style="display: none;">
+                <ui:Label text="Patient" class="hypothesis-panel-title"/>
+                <ui:VisualElement name="patient-portrait" class="patient-portrait"/>
+                <ui:Label name="share-hint" text="Drag each diagnosis onto the patient to decide together." class="hypothesis-hint share-hint"/>
+            </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="hand" picking-mode="Ignore" class="hand"/>
         <ui:VisualElement name="drag-layer" picking-mode="Ignore" class="drag-layer"/>
+        <ui:VisualElement name="share-dialogue" class="share-dialogue" style="display: none;">
+            <ui:Label name="share-stage" text="Team talk" class="share-stage"/>
+            <ui:Label name="share-purpose" text="" class="share-purpose"/>
+            <ui:ScrollView name="share-scroll" class="share-scroll">
+                <ui:Label name="share-introduction" text="" class="share-introduction"/>
+                <ui:VisualElement name="share-options" class="share-options"/>
+                <ui:VisualElement name="share-choices" class="share-choices"/>
+                <ui:Label name="share-spoken" text="" class="share-spoken"/>
+            </ui:ScrollView>
+            <ui:VisualElement class="share-actions">
+                <ui:Button name="share-leave" text="Leave" class="hypothesis-button"/>
+                <ui:Button name="share-continue" text="Continue" class="hypothesis-button hypothesis-button--primary"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
     </ui:VisualElement>
 </ui:UXML>

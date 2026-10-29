@@ -29,6 +29,8 @@ public class ScoreBreakdown
     public List<StepScore> Steps = new List<StepScore>();
     public int Percent;
     public ScoreLevel Level;
+    /// <summary>Set when the score was halved because a diagnosis and its treatment were not shared.</summary>
+    public string Penalty;
 }
 
 /// <summary>
@@ -39,6 +41,7 @@ public class ScoreBreakdown
 /// also loses 1 point for every diagnosis the cues do not support that takes a place belonging to a real one;
 /// a step never goes below 0. A step with nothing to judge is left out, so a cue the player never found is
 /// only counted once, in the first step. The overall score is the average of the steps.
+/// Handing over a diagnosis and its treatment without sharing them with the patient then halves that score.
 /// </para>
 /// </summary>
 public static class ScoreCalculator
@@ -46,7 +49,9 @@ public static class ScoreCalculator
     const int RightPlacePoints = 2;
     const int OneOffPoints = 1;
 
-    public static ScoreBreakdown Calculate(HandoverReport report)
+    /// <summary>Scores the report, then halves the percentage when any handed-over diagnosis was not shared.</summary>
+    /// <param name="unsharedDiagnoses">Titles of handed-over diagnoses that were not shared with the patient.</param>
+    public static ScoreBreakdown Calculate(HandoverReport report, IReadOnlyList<string> unsharedDiagnoses = null)
     {
         ScoreBreakdown score = new ScoreBreakdown();
         AddStep(score, RecogniseCues(report));
@@ -62,7 +67,36 @@ public static class ScoreCalculator
         float overall = score.Steps.Count > 0 ? total / score.Steps.Count : 0f;
         score.Percent = (int)Math.Round(overall * 100f, MidpointRounding.AwayFromZero);
         score.Level = LevelFor(overall);
+
+        if (unsharedDiagnoses != null && unsharedDiagnoses.Count > 0)
+        {
+            score.Percent /= 2;
+            score.Level = LevelFor(score.Percent / 100f);
+            score.Penalty = $"You handed over {JoinNames(unsharedDiagnoses)} without sharing the diagnosis and treatment with the patient, so the score was halved.";
+        }
+
         return score;
+    }
+
+    static string JoinNames(IReadOnlyList<string> names)
+    {
+        if (names.Count == 1)
+        {
+            return names[0];
+        }
+
+        if (names.Count == 2)
+        {
+            return $"{names[0]} and {names[1]}";
+        }
+
+        string text = names[0];
+        for (int i = 1; i < names.Count - 1; i++)
+        {
+            text += $", {names[i]}";
+        }
+
+        return $"{text}, and {names[names.Count - 1]}";
     }
 
     static StepScore RecogniseCues(HandoverReport report)

@@ -65,6 +65,8 @@ public class HandoverReport
     public int CuesRanked;
     public string Summary;
     public string Explanation;
+    /// <summary>Diagnoses the player's ranked cues produced, most urgent first. This is what they hand over.</summary>
+    public List<RankedDiagnosis> PlayerDiagnoses = new List<RankedDiagnosis>();
 }
 
 /// <summary>
@@ -120,6 +122,7 @@ public static class PriorityEvaluator
     static void BuildDiagnosisRows(HandoverReport report, SO_Patient patient, List<RecognizedCue> rankedCues)
     {
         List<RankedDiagnosis> player = DiagnosisRanker.Rank(rankedCues, patient.diagnoses);
+        report.PlayerDiagnoses = player;
         IReadOnlyList<string> order = patient.solutionDiagnosisIds ?? (IReadOnlyList<string>)Array.Empty<string>();
         int solutionCount = order.Count;
 

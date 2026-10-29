@@ -13,6 +13,19 @@
     margin-bottom: 16px;
 }
 
+.header-actions {
+    flex-direction: row;
+    align-items: center;
+}
+
+.header-actions > .hypothesis-button {
+    margin-left: 8px;
+}
+
+.hypothesis-button--wide {
+    width: 190px;
+}
+
 .hypothesis-title {
     color: rgb(232, 244, 248);
     font-size: 24px;
@@ -296,4 +309,172 @@
     -unity-font-style: italic;
     color: rgb(80, 104, 116);
     white-space: normal;
+}
+
+.diagnosis-card--in-hand {
+    position: absolute;
+    width: 200px;
+    height: 160px;
+    overflow: hidden;
+    translate: -50% 0;
+    transform-origin: 50% 100%;
+    transition-property: rotate, top, margin-left;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.diagnosis-card--hovered {
+    border-color: rgb(255, 210, 90);
+}
+
+.diagnosis-card--dragging {
+    opacity: 0.3;
+}
+
+.diagnosis-card--ghost {
+    position: absolute;
+    width: 200px;
+    height: 160px;
+    translate: -50% -50%;
+    rotate: 3deg;
+    opacity: 0.95;
+    border-color: rgb(255, 210, 90);
+    transition-duration: 0s;
+}
+
+.diagnosis-card-badge {
+    margin-top: 8px;
+    padding: 3px 8px;
+    align-self: flex-start;
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    background-color: rgb(120, 130, 140);
+    border-radius: 4px;
+}
+
+.diagnosis-card--shared .diagnosis-card-badge {
+    background-color: rgb(32, 120, 96);
+}
+
+.patient-drop {
+    flex-grow: 1;
+    align-items: center;
+    justify-content: center;
+}
+
+.patient-portrait {
+    width: 280px;
+    height: 420px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+    background-color: rgba(18, 42, 58, 0.5);
+    border-width: 3px;
+    border-color: rgb(122, 168, 186);
+    border-radius: 8px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.patient-drop--target .patient-portrait {
+    border-color: rgb(255, 210, 90);
+}
+
+.share-hint {
+    max-width: 520px;
+    -unity-text-align: middle-center;
+}
+
+.share-dialogue {
+    position: absolute;
+    left: 80px;
+    right: 80px;
+    top: 100px;
+    bottom: 290px;
+    padding: 20px 24px;
+    flex-direction: column;
+    background-color: rgb(246, 250, 252);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+}
+
+.share-stage {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+}
+
+.share-purpose {
+    font-size: 14px;
+    color: rgb(80, 104, 116);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.share-scroll {
+    flex-grow: 1;
+    min-height: 0;
+}
+
+.share-introduction {
+    font-size: 15px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.share-option {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background-color: rgb(232, 244, 248);
+    border-radius: 4px;
+}
+
+.share-option-title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+}
+
+.share-option-text {
+    font-size: 13px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+}
+
+.share-choice {
+    margin-top: 8px;
+    padding: 8px 12px;
+    white-space: normal;
+    height: auto;
+    min-height: 40px;
+    background-color: rgb(3, 113, 127);
+    color: rgb(245, 250, 252);
+    border-radius: 4px;
+    -unity-text-align: middle-left;
+}
+
+.share-choice:hover {
+    background-color: rgb(50, 255, 215);
+    color: rgb(0, 0, 0);
+}
+
+.share-spoken {
+    margin-top: 12px;
+    font-size: 15px;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+}
+
+.share-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
+.share-actions > .hypothesis-button {
+    margin-left: 8px;
 }

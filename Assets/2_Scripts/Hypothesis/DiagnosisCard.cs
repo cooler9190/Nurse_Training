@@ -1,53 +1,59 @@
 using UnityEngine.UIElements;
 
 /// <summary>
-/// UI Toolkit element that displays one <see cref="RankedDiagnosis"/>: priority badge, title,
-/// description, treatment and the ranked cues it is based on.
-/// Styling lives in <c>HypothesisScreen.uss</c>; this class only builds the labels and classes.
+/// Compact diagnosis card for the share-decisions hand: priority, title, and whether it has been
+/// shared with the patient. Styling lives in <c>HypothesisScreen.uss</c>.
 /// </summary>
 public class DiagnosisCard : VisualElement
 {
-    public DiagnosisCard(RankedDiagnosis result)
+    readonly Label badge;
+
+    public RankedDiagnosis Result { get; }
+    public bool Shared { get; private set; }
+
+    public DiagnosisCard(RankedDiagnosis result, bool shared)
     {
+        Result = result;
         Diagnosis diagnosis = result.Diagnosis;
         AddToClassList("diagnosis-card");
-
-        VisualElement header = new VisualElement();
-        header.AddToClassList("diagnosis-card-header");
-        Add(header);
+        AddToClassList("diagnosis-card--in-hand");
 
         Label priority = new Label($"Priority {result.Priority}");
         priority.AddToClassList("diagnosis-card-priority");
-        header.Add(priority);
+        Add(priority);
 
-        Label title = new Label(string.IsNullOrEmpty(diagnosis.title) ? diagnosis.id : diagnosis.title);
-        title.AddToClassList("diagnosis-card-title");
-        header.Add(title);
+        string title = diagnosis != null && !string.IsNullOrEmpty(diagnosis.title) ? diagnosis.title : diagnosis?.id;
+        Label titleLabel = new Label(string.IsNullOrEmpty(title) ? "Diagnosis" : title);
+        titleLabel.AddToClassList("diagnosis-card-title");
+        Add(titleLabel);
 
-        AddSection("Diagnosis", diagnosis.description);
-        AddSection("Treatment", diagnosis.treatment);
+        badge = new Label();
+        badge.AddToClassList("diagnosis-card-badge");
+        Add(badge);
+        SetShared(shared);
 
-        if (result.SupportingCueTitles != null && result.SupportingCueTitles.Count > 0)
+        // The card must be the only pick target, otherwise moving over a child label
+        // would count as leaving the card and break hover and dragging.
+        foreach (VisualElement child in Children())
         {
-            Label basedOn = new Label($"Based on: {string.Join(", ", result.SupportingCueTitles)}");
-            basedOn.AddToClassList("diagnosis-card-based-on");
-            Add(basedOn);
+            SetPickingIgnored(child);
         }
     }
 
-    void AddSection(string heading, string text)
+    /// <summary>Shows Shared or Not shared.</summary>
+    public void SetShared(bool shared)
     {
-        if (string.IsNullOrWhiteSpace(text))
+        Shared = shared;
+        badge.text = shared ? "Shared" : "Not shared";
+        EnableInClassList("diagnosis-card--shared", shared);
+    }
+
+    static void SetPickingIgnored(VisualElement element)
+    {
+        element.pickingMode = PickingMode.Ignore;
+        foreach (VisualElement child in element.Children())
         {
-            return;
+            SetPickingIgnored(child);
         }
-
-        Label headingLabel = new Label(heading);
-        headingLabel.AddToClassList("diagnosis-card-heading");
-        Add(headingLabel);
-
-        Label body = new Label(text);
-        body.AddToClassList("diagnosis-card-text");
-        Add(body);
     }
 }
