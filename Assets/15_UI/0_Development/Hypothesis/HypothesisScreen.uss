@@ -147,18 +147,63 @@
 }
 
 .cue-card {
-    padding: 10px;
-    background-color: rgb(236, 244, 247);
-    border-radius: 6px;
-    border-width: 2px;
-    border-color: rgb(122, 168, 186);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     flex-shrink: 0;
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.cue-card--vertical {
+    width: 157px;
+    height: 230px;
+    overflow: hidden;
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_InterviewCard.png?fileID=21300000&guid=c8108b1209c771345935cc8fe667e24a&type=3#V_InterviewCard");
+}
+
+.cue-card-body {
+    flex-grow: 1;
+    height: 100%;
+}
+
+.cue-card--vertical .cue-card-body {
+    padding-top: 28px;
+    padding-right: 14px;
+    padding-bottom: 16px;
+    padding-left: 14px;
+}
+
+.cue-card--vertical.cue-card--visual {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_ObserveCard.png?fileID=21300000&guid=16ae1f086ef70674ab6f84eb996f2563&type=3#V_ObserveCard");
+}
+
+.cue-card--vertical.cue-card--examination {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_ExamCard.png?fileID=21300000&guid=17c1082c0295e2940879297c1984653c&type=3#V_ExamCard");
+}
+
+.cue-card--horizontal {
+    height: 144px;
+    overflow: hidden;
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/H_InterviewCard.png?fileID=21300000&guid=d696559978898c247a13ef213900eb53&type=3#H_InterviewCard");
+}
+
+.cue-card--horizontal .cue-card-body {
+    padding-top: 18px;
+    padding-bottom: 18px;
+    padding-left: 8%;
+    padding-right: 38%;
+    justify-content: center;
+}
+
+.cue-card--horizontal.cue-card--visual {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/H_ObserveCard.png?fileID=21300000&guid=7deaa019aeac2844ab5846dd1db5a9af&type=3#H_ObserveCard");
+}
+
+.cue-card--horizontal.cue-card--examination {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/H_ExamCard.png?fileID=21300000&guid=806c8fc0d2394ab42be97797647b2c89&type=3#H_ExamCard");
 }
 
 .cue-card--in-hand {
     position: absolute;
-    width: 170px;
-    height: 230px;
     overflow: hidden;
     translate: -50% 0;
     transform-origin: 50% 100%;
@@ -167,13 +212,8 @@
     transition-timing-function: ease-out-cubic;
 }
 
-.cue-card--hovered {
+.cue-card--in-hand.cue-card--hovered {
     scale: 1.5 1.5;
-    border-color: rgb(255, 210, 90);
-    border-left-color: rgb(53, 234, 198);
-    border-right-color: rgb(53, 234, 198);
-    border-top-color: rgb(53, 234, 198);
-    border-bottom-color: rgb(53, 234, 198);
 }
 
 .cue-card--ranked {
@@ -186,17 +226,46 @@
 
 .cue-card--ghost {
     position: absolute;
-    width: 200px;
     translate: -50% -50%;
     rotate: 3deg;
     opacity: 0.95;
-    border-color: rgb(255, 210, 90);
+    transition-duration: 0s;
+}
+
+.cue-card--ghost.cue-card--horizontal {
+    width: 480px;
+    height: 78px;
 }
 
 .cue-card-header {
     flex-direction: row;
     align-items: center;
     margin-bottom: 6px;
+}
+
+.cue-card--vertical .cue-card-header,
+.cue-card-origin {
+    display: none;
+}
+
+.cue-card--horizontal .cue-card-header {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 7%;
+    margin-bottom: 0;
+    justify-content: center;
+    align-items: center;
+}
+
+.cue-card--horizontal .cue-card-description,
+.cue-card--horizontal .cue-card-source {
+    display: none;
+}
+
+.cue-card--vertical .cue-card-source {
+    margin-top: auto;
 }
 
 .cue-card-rank {
@@ -210,6 +279,21 @@
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     border-radius: 13px;
+}
+
+.cue-card--horizontal .cue-card-rank {
+    min-width: 0;
+    height: auto;
+    margin-right: 0;
+    padding: 0;
+    background-color: rgba(0, 0, 0, 0);
+    color: rgb(255, 255, 255);
+    font-size: 18px;
+    border-radius: 0;
+}
+
+.cue-card--horizontal .cue-card-title {
+    margin-bottom: 0;
 }
 
 .cue-card-origin {
@@ -257,12 +341,11 @@
 
 .diagnosis-card {
     margin-bottom: 10px;
-    padding: 12px;
-    background-color: rgb(246, 250, 252);
-    border-radius: 6px;
-    border-left-width: 6px;
-    border-color: rgb(196, 64, 56);
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
     flex-shrink: 0;
+    -unity-background-scale-mode: stretch-to-fill;
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_DiagnoseCard.png?fileID=21300000&guid=de546db456f2f104a90a40184493ccbc&type=3#V_DiagnoseCard");
 }
 
 .diagnosis-card-header {
@@ -272,6 +355,7 @@
 }
 
 .diagnosis-card-priority {
+    align-self: flex-start;
     margin-right: 10px;
     padding: 3px 8px;
     background-color: rgb(196, 64, 56);
@@ -311,10 +395,20 @@
     white-space: normal;
 }
 
+.diagnosis-card-body {
+    flex-grow: 1;
+    height: 100%;
+    padding-top: 28px;
+    padding-right: 14px;
+    padding-bottom: 16px;
+    padding-left: 14px;
+}
+
 .diagnosis-card--in-hand {
     position: absolute;
-    width: 200px;
-    height: 160px;
+    width: 157px;
+    height: 230px;
+    margin-bottom: 0;
     overflow: hidden;
     translate: -50% 0;
     transform-origin: 50% 100%;
@@ -323,27 +417,22 @@
     transition-timing-function: ease-out-cubic;
 }
 
-.diagnosis-card--hovered {
-    border-color: rgb(255, 210, 90);
-}
-
 .diagnosis-card--dragging {
     opacity: 0.3;
 }
 
 .diagnosis-card--ghost {
     position: absolute;
-    width: 200px;
-    height: 160px;
+    width: 157px;
+    height: 230px;
     translate: -50% -50%;
     rotate: 3deg;
     opacity: 0.95;
-    border-color: rgb(255, 210, 90);
     transition-duration: 0s;
 }
 
 .diagnosis-card-badge {
-    margin-top: 8px;
+    margin-top: auto;
     padding: 3px 8px;
     align-self: flex-start;
     font-size: 12px;
@@ -351,6 +440,30 @@
     color: rgb(255, 255, 255);
     background-color: rgb(120, 130, 140);
     border-radius: 4px;
+}
+
+.card-select {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+.cue-card--vertical > .card-select,
+.diagnosis-card > .card-select {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_CardSelect.png?fileID=21300000&guid=a4b5f991cd0c58346a502ce01cb1eff2&type=3#V_CardSelect");
+}
+
+.cue-card--horizontal > .card-select {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/H_CardSelect.png?fileID=21300000&guid=5f0b1590abf6f314a8b41dde9da72db5&type=3#H_CardSelect");
+}
+
+.cue-card--hovered > .card-select,
+.diagnosis-card--hovered > .card-select {
+    display: flex;
 }
 
 .diagnosis-card--shared .diagnosis-card-badge {

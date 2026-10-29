@@ -18,19 +18,28 @@ public class DiagnosisCard : VisualElement
         AddToClassList("diagnosis-card");
         AddToClassList("diagnosis-card--in-hand");
 
+        VisualElement body = new VisualElement();
+        body.AddToClassList("diagnosis-card-body");
+        Add(body);
+
         Label priority = new Label($"Priority {result.Priority}");
         priority.AddToClassList("diagnosis-card-priority");
-        Add(priority);
+        body.Add(priority);
 
         string title = diagnosis != null && !string.IsNullOrEmpty(diagnosis.title) ? diagnosis.title : diagnosis?.id;
         Label titleLabel = new Label(string.IsNullOrEmpty(title) ? "Diagnosis" : title);
         titleLabel.AddToClassList("diagnosis-card-title");
-        Add(titleLabel);
+        body.Add(titleLabel);
 
         badge = new Label();
         badge.AddToClassList("diagnosis-card-badge");
-        Add(badge);
+        body.Add(badge);
         SetShared(shared);
+
+        VisualElement select = new VisualElement();
+        select.AddToClassList("card-select");
+        select.pickingMode = PickingMode.Ignore;
+        Add(select);
 
         // The card must be the only pick target, otherwise moving over a child label
         // would count as leaving the card and break hover and dragging.

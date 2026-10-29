@@ -376,6 +376,7 @@ public class HypothesisScreenUI : MonoBehaviour
             card.RemoveFromClassList("cue-card--in-hand");
             card.RemoveFromClassList("cue-card--hovered");
             card.AddToClassList("cue-card--ranked");
+            card.SetOrientation(false);
             card.style.left = StyleKeyword.Null;
             card.style.top = StyleKeyword.Null;
             card.style.marginLeft = StyleKeyword.Null;
@@ -388,6 +389,7 @@ public class HypothesisScreenUI : MonoBehaviour
         {
             card.RemoveFromClassList("cue-card--ranked");
             card.AddToClassList("cue-card--in-hand");
+            card.SetOrientation(true);
             card.SetRank(0);
             hand?.Add(card);
         }
@@ -431,22 +433,32 @@ public class HypothesisScreenUI : MonoBehaviour
 
     void SetCueHovered(CueCard card, bool hovered)
     {
-        if (dragCard != null || !handCards.Contains(card))
+        if (dragCard != null)
         {
             return;
         }
 
-        if (hovered)
+        bool inHand = handCards.Contains(card);
+        if (!inHand && !rankedCards.Contains(card))
         {
-            hoveredCard = card;
+            return;
         }
-        else if (hoveredCard == card)
+
+        if (inHand)
         {
-            hoveredCard = null;
+            if (hovered)
+            {
+                hoveredCard = card;
+            }
+            else if (hoveredCard == card)
+            {
+                hoveredCard = null;
+            }
+
+            LayoutCueHand();
         }
 
         card.EnableInClassList("cue-card--hovered", hovered);
-        LayoutCueHand();
     }
 
     void BeginCueDrag(CueCard card, PointerDownEvent evt)
@@ -464,6 +476,9 @@ public class HypothesisScreenUI : MonoBehaviour
 
         dragGhost = new CueCard(card.Cue) { pickingMode = PickingMode.Ignore };
         dragGhost.AddToClassList("cue-card--ghost");
+        dragGhost.SetOrientation(card.ClassListContains("cue-card--vertical"));
+        int rank = rankedCards.IndexOf(card);
+        dragGhost.SetRank(rank >= 0 ? rank + 1 : 0);
         dragLayer.Add(dragGhost);
         MoveGhost(dragGhost, evt.position);
         evt.StopPropagation();
@@ -602,7 +617,7 @@ public class HypothesisScreenUI : MonoBehaviour
     void LayoutDiagnosisHand()
     {
         int count = diagnosisCards.Count;
-        float spacing = count > 1 ? Mathf.Min(220f, maxHandSpread / (count - 1)) : 0f;
+        float spacing = count > 1 ? Mathf.Min(handCardSpacing, maxHandSpread / (count - 1)) : 0f;
 
         for (int i = 0; i < count; i++)
         {
