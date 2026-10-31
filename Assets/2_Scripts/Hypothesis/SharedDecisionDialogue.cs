@@ -1,23 +1,19 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine.UIElements;
 
 /// <summary>
-/// The Three-talk overlay on the hypothesis screen. One diagnosis at a time: team talk, option talk,
-/// then decision talk. Finishing decision talk raises <see cref="OnFinished"/> with the diagnosis id.
-/// Leaving early does not. The same elements are reused for every diagnosis.
+/// The overlay used while one diagnosis is being shared. It does not own the rules: the hypothesis
+/// screen decides what frustration and the Shared flag do. This only shows the current step.
 /// </summary>
 public class SharedDecisionDialogue
 {
-    /// <summary>The player finished decision talk for this diagnosis id.</summary>
-    public event Action<string> OnFinished;
-
-    static readonly string[] StageNames = { "Team talk", "Option talk", "Decision talk" };
-    static readonly string[] StagePurposes =
-    {
-        "Describe the choices, offer support, and ask about goals.",
-        "Lay the options out, with the pros and cons.",
-        "Let the patient's preferences drive the decision."
-    };
+    public event Action OnDiscussedProsCons;
+    public event Action OnSkippedProsCons;
+    public event Action OnDecideWithPatient;
+    public event Action OnDecideAlone;
+    public event Action<int> OnTreatmentPicked;
+    public event Action OnWalkoutAcknowledged;
 
     readonly VisualElement root;
     readonly Label stageLabel;
@@ -29,10 +25,9 @@ public class SharedDecisionDialogue
     readonly Button continueButton;
     readonly Button leaveButton;
 
-    Diagnosis diagnosis;
-    string patientName = "Patient";
-    int stage;
+    Action continueAction;
     bool open;
+    bool walkingOut;
 
     public bool IsOpen => open;
 
@@ -66,7 +61,6 @@ public class SharedDecisionDialogue
         Hide();
     }
 
-    /// <summary>Unsubscribes the buttons. Call this before the visual tree is released.</summary>
     public void Dispose()
     {
         if (leaveButton != null)
@@ -79,70 +73,119 @@ public class SharedDecisionDialogue
             continueButton.clicked -= Continue;
         }
 
-        OnFinished = null;
+        OnDiscussedProsCons = null;
+        OnSkippedProsCons = null;
+        OnDecideWithPatient = null;
+        OnDecideAlone = null;
+        OnTreatmentPicked = null;
+        OnWalkoutAcknowledged = null;
     }
 
-    /// <summary>Opens the overlay on team talk for <paramref name="diagnosis"/>.</summary>
-    public void Begin(Diagnosis diagnosis, string speakerName)
-    {
-        if (root == null || diagnosis == null)
-        {
-            return;
-        }
-
-        this.diagnosis = diagnosis;
-        patientName = string.IsNullOrWhiteSpace(speakerName) ? "Patient" : speakerName;
-        stage = 0;
-        open = true;
-        ShowStage();
-        root.style.display = DisplayStyle.Flex;
-    }
-
-    /// <summary>Closes the overlay without marking the diagnosis shared.</summary>
     public void Hide()
     {
-        diagnosis = null;
+        walkingOut = false;
         open = false;
+        continueAction = null;
         if (root != null)
         {
             root.style.display = DisplayStyle.None;
         }
     }
 
-    void ShowStage()
+    public void ShowGoals(string patientName, string goalsAndFears)
     {
-        SharedDecisionTalk talk = diagnosis != null ? diagnosis.sharedDecision : null;
-        TalkStage current = talk != null ? talk.StageAt(stage) : null;
+        string text = string.IsNullOrWhiteSpace(goalsAndFears)
+            ? "They are not sure what else matters to them right now."
+            : goalsAndFears;
+        ShowPanel("Their goals and fears", "Asking what matters to them brings their frustration down.", text, null);
+        ShowSpoken($"You explain the diagnosis and ask what matters to them.\n\n{Name(patientName)}: {text}");
+        continueAction = Hide;
+    }
 
-        if (stageLabel != null)
+    public void ShowDiscuss(TreatmentOption treatment, string patientName)
+    {
+        string title = treatment != null ? treatment.title : "This treatment";
+        ShowPanel(title, "Discuss the pros and cons with the patient, or skip them.", null, null);
+        ClearSpoken();
+        AddChoice("Discuss the pros and cons.", () => ShowProsCons(treatment, patientName));
+        AddChoice("Skip the pros and cons.", () => ShowSkip(patientName));
+    }
+
+    public void ShowDecision()
+    {
+        ShowPanel("Decide on a treatment", "Let the patient's preference drive the choice, or decide alone.", null, null);
+        ClearSpoken();
+        AddChoice("Decide with the patient.", () => FinishChoice(OnDecideWithPatient));
+        AddChoice("Decide yourself.", () => FinishChoice(OnDecideAlone));
+    }
+
+    public void ShowTreatmentPick(IReadOnlyList<TreatmentOption> treatments, bool withPatient)
+    {
+        ShowPanel(withPatient ? "Choose together" : "Your decision",
+            withPatient ? "Ask which treatment fits what matters to them." : "Tell them which treatment they will have.",
+            null, null);
+        ClearSpoken();
+        if (treatments == null)
         {
-            stageLabel.text = StageNames[stage];
+            return;
         }
 
-        if (purposeLabel != null)
+        for (int i = 0; i < treatments.Count; i++)
         {
-            purposeLabel.text = StagePurposes[stage];
+            TreatmentOption treatment = treatments[i];
+            if (treatment == null || string.IsNullOrWhiteSpace(treatment.title))
+            {
+                continue;
+            }
+
+            int index = i;
+            AddChoice(treatment.title, () =>
+            {
+                Hide();
+                OnTreatmentPicked?.Invoke(index);
+            });
+        }
+    }
+
+    public void ShowWalkout(string patientName)
+    {
+        walkingOut = true;
+        ShowPanel("The patient is leaving", "Their frustration reached the limit.", null, null);
+        ShowSpoken($"{Name(patientName)}: I've had enough. I'm leaving.");
+        if (leaveButton != null)
+        {
+            leaveButton.style.display = DisplayStyle.None;
         }
 
-        if (introduction != null)
+        continueAction = () =>
         {
-            introduction.text = current != null ? current.introduction : string.Empty;
-            introduction.style.display = string.IsNullOrWhiteSpace(introduction.text) ? DisplayStyle.None : DisplayStyle.Flex;
-        }
+            walkingOut = false;
+            open = false;
+            continueAction = null;
+            if (root != null)
+            {
+                root.style.display = DisplayStyle.None;
+            }
 
+            OnWalkoutAcknowledged?.Invoke();
+        };
+    }
+
+    void ShowProsCons(TreatmentOption treatment, string patientName)
+    {
+        string pros = treatment != null ? treatment.pros : string.Empty;
+        string cons = treatment != null ? treatment.cons : string.Empty;
+        options?.Clear();
         if (options != null)
         {
-            options.Clear();
-            bool showOptions = stage == 1 && talk != null && talk.options != null;
-            if (showOptions)
+            if (!string.IsNullOrWhiteSpace(pros))
             {
-                foreach (TreatmentOption option in talk.options)
-                {
-                    if (option != null && !string.IsNullOrWhiteSpace(option.title))
-                    {
-                        options.Add(BuildOption(option));
-                    }
-                }
+                options.Add(Line($"Pros: {pros}"));
+            }
+
+            if (!string.IsNullOrWhiteSpace(cons))
+            {
+                options.Add(Line($"Cons: {cons}"));
             }
 
             options.style.display = options.childCount > 0 ? DisplayStyle.Flex : DisplayStyle.None;
@@ -150,102 +193,132 @@ public class SharedDecisionDialogue
 
         if (choices != null)
         {
-            choices.Clear();
-            choices.style.display = DisplayStyle.Flex;
-            if (current != null && current.choices != null)
-            {
-                foreach (TalkChoice choice in current.choices)
-                {
-                    if (choice == null || string.IsNullOrWhiteSpace(choice.playerLine))
-                    {
-                        continue;
-                    }
-
-                    TalkChoice captured = choice;
-                    Button button = new Button(() => Choose(captured)) { text = captured.playerLine };
-                    button.AddToClassList("share-choice");
-                    button.style.whiteSpace = WhiteSpace.Normal;
-                    button.style.height = StyleKeyword.Auto;
-                    choices.Add(button);
-                }
-            }
+            choices.style.display = DisplayStyle.None;
         }
 
-        if (spoken != null)
-        {
-            spoken.style.display = DisplayStyle.None;
-        }
-
-        if (continueButton != null)
-        {
-            continueButton.style.display = DisplayStyle.None;
-        }
+        ShowSpoken($"{Name(patientName)}: I understand the benefits and the drawbacks.");
+        continueAction = () => FinishChoice(OnDiscussedProsCons);
     }
 
-    void Choose(TalkChoice choice)
+    void ShowSkip(string patientName)
     {
         if (choices != null)
         {
             choices.style.display = DisplayStyle.None;
         }
 
-        if (spoken != null)
+        ShowSpoken($"{Name(patientName)}: You have not told me what this treatment would mean for me.");
+        continueAction = () => FinishChoice(OnSkippedProsCons);
+    }
+
+    void FinishChoice(Action callback)
+    {
+        Hide();
+        callback?.Invoke();
+    }
+
+    void ShowPanel(string heading, string purpose, string introductionText, Action onContinue)
+    {
+        if (root == null)
         {
-            spoken.text = $"You: {choice.playerLine}\n\n{patientName}: {choice.patientResponse}";
-            spoken.style.display = DisplayStyle.Flex;
+            return;
         }
 
+        open = true;
+        root.style.display = DisplayStyle.Flex;
+        if (stageLabel != null)
+        {
+            stageLabel.text = heading ?? string.Empty;
+        }
+
+        if (purposeLabel != null)
+        {
+            purposeLabel.text = purpose ?? string.Empty;
+        }
+
+        if (introduction != null)
+        {
+            introduction.text = introductionText ?? string.Empty;
+            introduction.style.display = string.IsNullOrWhiteSpace(introductionText) ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        if (options != null)
+        {
+            options.Clear();
+            options.style.display = DisplayStyle.None;
+        }
+
+        if (choices != null)
+        {
+            choices.Clear();
+            choices.style.display = DisplayStyle.Flex;
+        }
+
+        ClearSpoken();
+        if (continueButton != null)
+        {
+            continueButton.style.display = DisplayStyle.None;
+        }
+
+        if (leaveButton != null)
+        {
+            leaveButton.style.display = walkingOut ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        continueAction = onContinue;
+    }
+
+    void AddChoice(string text, Action onClick)
+    {
+        if (choices == null)
+        {
+            return;
+        }
+
+        Button button = new Button(onClick) { text = text };
+        button.AddToClassList("share-choice");
+        button.style.whiteSpace = WhiteSpace.Normal;
+        button.style.height = StyleKeyword.Auto;
+        choices.Add(button);
+    }
+
+    void ShowSpoken(string text)
+    {
+        if (spoken == null)
+        {
+            return;
+        }
+
+        spoken.text = text;
+        spoken.style.display = DisplayStyle.Flex;
         if (continueButton != null)
         {
             continueButton.style.display = DisplayStyle.Flex;
         }
     }
 
+    void ClearSpoken()
+    {
+        if (spoken != null)
+        {
+            spoken.text = string.Empty;
+            spoken.style.display = DisplayStyle.None;
+        }
+    }
+
     void Continue()
     {
-        if (diagnosis == null)
-        {
-            return;
-        }
-
-        if (stage < 2)
-        {
-            stage++;
-            ShowStage();
-            return;
-        }
-
-        string id = diagnosis.id;
-        Hide();
-        if (!string.IsNullOrEmpty(id))
-        {
-            OnFinished?.Invoke(id);
-        }
+        Action action = continueAction;
+        continueAction = null;
+        action?.Invoke();
     }
 
-    static VisualElement BuildOption(TreatmentOption option)
+    static string Name(string patientName)
     {
-        VisualElement box = new VisualElement();
-        box.AddToClassList("share-option");
-
-        Label title = new Label(option.title);
-        title.AddToClassList("share-option-title");
-        box.Add(title);
-
-        if (!string.IsNullOrWhiteSpace(option.pros))
-        {
-            box.Add(OptionLine($"Pros: {option.pros}"));
-        }
-
-        if (!string.IsNullOrWhiteSpace(option.cons))
-        {
-            box.Add(OptionLine($"Cons: {option.cons}"));
-        }
-
-        return box;
+        return string.IsNullOrWhiteSpace(patientName) ? "Patient" : patientName;
     }
 
-    static Label OptionLine(string text)
+    static Label Line(string text)
     {
         Label label = new Label(text);
         label.AddToClassList("share-option-text");

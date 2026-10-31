@@ -42,6 +42,7 @@ public class ScoreBreakdown
 /// a step never goes below 0. A step with nothing to judge is left out, so a cue the player never found is
 /// only counted once, in the first step. The overall score is the average of the steps.
 /// Handing over a diagnosis and its treatment without sharing them with the patient then halves that score.
+/// If the patient leaves because their frustration reached the limit, the overall score is zero instead.
 /// </para>
 /// </summary>
 public static class ScoreCalculator
@@ -49,9 +50,10 @@ public static class ScoreCalculator
     const int RightPlacePoints = 2;
     const int OneOffPoints = 1;
 
-    /// <summary>Scores the report, then halves the percentage when any handed-over diagnosis was not shared.</summary>
+    /// <summary>Scores the report. Halves the percentage when a diagnosis was not shared, unless the patient left, which scores zero.</summary>
     /// <param name="unsharedDiagnoses">Titles of handed-over diagnoses that were not shared with the patient.</param>
-    public static ScoreBreakdown Calculate(HandoverReport report, IReadOnlyList<string> unsharedDiagnoses = null)
+    /// <param name="examinationFailed">True when the patient's frustration reached the limit and they left.</param>
+    public static ScoreBreakdown Calculate(HandoverReport report, IReadOnlyList<string> unsharedDiagnoses = null, bool examinationFailed = false)
     {
         ScoreBreakdown score = new ScoreBreakdown();
         AddStep(score, RecogniseCues(report));
@@ -68,7 +70,13 @@ public static class ScoreCalculator
         score.Percent = (int)Math.Round(overall * 100f, MidpointRounding.AwayFromZero);
         score.Level = LevelFor(overall);
 
-        if (unsharedDiagnoses != null && unsharedDiagnoses.Count > 0)
+        if (examinationFailed)
+        {
+            score.Percent = 0;
+            score.Level = ScoreLevel.Beginning;
+            score.Penalty = "The patient left before the examination was finished, so the examination failed.";
+        }
+        else if (unsharedDiagnoses != null && unsharedDiagnoses.Count > 0)
         {
             score.Percent /= 2;
             score.Level = LevelFor(score.Percent / 100f);

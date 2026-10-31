@@ -470,6 +470,126 @@
     background-color: rgb(32, 120, 96);
 }
 
+.diagnosis-card-treatment {
+    margin-top: 4px;
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+}
+
+.diagnosis-card-treatment-detail {
+    font-size: 11px;
+    color: rgb(28, 40, 48);
+    white-space: normal;
+}
+
+.frustration-meter {
+    width: 180px;
+    margin-right: 8px;
+}
+
+.frustration-label {
+    color: rgb(255, 214, 170);
+    font-size: 12px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.frustration-track {
+    height: 10px;
+    background-color: rgb(18, 42, 58);
+    border-radius: 5px;
+}
+
+.frustration-fill {
+    height: 100%;
+    width: 20%;
+    background-color: rgb(196, 64, 56);
+    border-radius: 5px;
+}
+
+.share-patient-actions {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.ask-goals-button {
+    width: 360px;
+    height: auto;
+    min-height: 44px;
+    white-space: normal;
+    margin-right: 8px;
+}
+
+.treatment-card {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    flex-shrink: 0;
+    -unity-background-scale-mode: stretch-to-fill;
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_DiagnoseCard.png?fileID=21300000&guid=de546db456f2f104a90a40184493ccbc&type=3#V_DiagnoseCard");
+}
+
+.treatment-card-body {
+    flex-grow: 1;
+    height: 100%;
+    padding-top: 28px;
+    padding-right: 14px;
+    padding-bottom: 16px;
+    padding-left: 14px;
+}
+
+.treatment-card-title {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(18, 56, 74);
+    white-space: normal;
+    margin-bottom: 6px;
+}
+
+.treatment-card--in-hand {
+    position: absolute;
+    width: 157px;
+    height: 230px;
+    overflow: hidden;
+    translate: -50% 0;
+    transform-origin: 50% 100%;
+    transition-property: scale, translate, rotate, top, margin-left;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-out-cubic;
+}
+
+.treatment-card--in-hand.treatment-card--hovered {
+    scale: 1.5 1.5;
+}
+
+.treatment-card--dragging {
+    opacity: 0.3;
+}
+
+.treatment-card--ghost {
+    position: absolute;
+    width: 157px;
+    height: 230px;
+    translate: -50% -50%;
+    rotate: 3deg;
+    opacity: 0.95;
+    transition-duration: 0s;
+}
+
+.treatment-card > .card-select {
+    background-image: url("project://database/Assets/9_Sprites/1_UI/Cards/V_CardSelect.png?fileID=21300000&guid=a4b5f991cd0c58346a502ce01cb1eff2&type=3#V_CardSelect");
+}
+
+.treatment-card--hovered > .card-select {
+    display: flex;
+}
+
+.treatment-card--discussed .diagnosis-card-badge {
+    background-color: rgb(32, 120, 96);
+}
+
 .patient-drop {
     flex-grow: 1;
     align-items: center;

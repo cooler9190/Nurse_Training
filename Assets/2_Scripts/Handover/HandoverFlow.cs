@@ -21,6 +21,7 @@ public class HandoverFlow : MonoBehaviour
     bool interviewActive;
     bool hypothesisOpen;
     bool handoverOpen;
+    bool examinationFailed;
 
     void Awake()
     {
@@ -44,6 +45,7 @@ public class HandoverFlow : MonoBehaviour
         {
             hypothesisScreen.OnClosed += HandleHypothesisClosed;
             hypothesisScreen.OnHandoverRequested += HandleHandover;
+            hypothesisScreen.OnExaminationFailed += HandleExaminationFailed;
         }
         if (handoverScreen != null)
         {
@@ -66,6 +68,7 @@ public class HandoverFlow : MonoBehaviour
         {
             hypothesisScreen.OnClosed -= HandleHypothesisClosed;
             hypothesisScreen.OnHandoverRequested -= HandleHandover;
+            hypothesisScreen.OnExaminationFailed -= HandleExaminationFailed;
         }
         if (handoverScreen != null)
         {
@@ -80,6 +83,7 @@ public class HandoverFlow : MonoBehaviour
         interviewActive = true;
         hypothesisOpen = false;
         handoverOpen = false;
+        examinationFailed = false;
         UpdateButton();
     }
 
@@ -87,6 +91,7 @@ public class HandoverFlow : MonoBehaviour
     {
         interviewActive = false;
         handoverOpen = false;
+        examinationFailed = false;
         handoverScreen.Hide();
         UpdateButton();
     }
@@ -110,9 +115,25 @@ public class HandoverFlow : MonoBehaviour
             return;
         }
 
+        ShowHandover();
+    }
+
+    void HandleExaminationFailed()
+    {
+        examinationFailed = true;
+        ShowHandover();
+    }
+
+    void ShowHandover()
+    {
+        if (patient == null || patient.Profile == null || hypothesisScreen == null || handoverScreen == null)
+        {
+            return;
+        }
+
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
         handoverOpen = true;
-        handoverScreen.Show(report, ScoreCalculator.Calculate(report, UnsharedDiagnoses(report)));
+        handoverScreen.Show(report, ScoreCalculator.Calculate(report, UnsharedDiagnoses(report), examinationFailed));
     }
 
     void HandleHandoverClosed()

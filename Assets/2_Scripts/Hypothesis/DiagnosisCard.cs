@@ -7,9 +7,14 @@ using UnityEngine.UIElements;
 public class DiagnosisCard : VisualElement
 {
     readonly Label badge;
+    readonly VisualElement body;
+    Label treatmentTitle;
+    Label treatmentPros;
+    Label treatmentCons;
 
     public RankedDiagnosis Result { get; }
     public bool Shared { get; private set; }
+    public TreatmentOption ChosenTreatment { get; private set; }
 
     public DiagnosisCard(RankedDiagnosis result, bool shared)
     {
@@ -18,9 +23,10 @@ public class DiagnosisCard : VisualElement
         AddToClassList("diagnosis-card");
         AddToClassList("diagnosis-card--in-hand");
 
-        VisualElement body = new VisualElement();
-        body.AddToClassList("diagnosis-card-body");
-        Add(body);
+        VisualElement cardBody = new VisualElement();
+        cardBody.AddToClassList("diagnosis-card-body");
+        Add(cardBody);
+        body = cardBody;
 
         Label priority = new Label($"Priority {result.Priority}");
         priority.AddToClassList("diagnosis-card-priority");
@@ -55,6 +61,41 @@ public class DiagnosisCard : VisualElement
         Shared = shared;
         badge.text = shared ? "Shared" : "Not shared";
         EnableInClassList("diagnosis-card--shared", shared);
+    }
+
+    /// <summary>Writes the decided treatment onto this card. A later decision replaces it.</summary>
+    public void SetChosenTreatment(TreatmentOption treatment)
+    {
+        ChosenTreatment = treatment;
+        bool show = treatment != null && !string.IsNullOrWhiteSpace(treatment.title);
+        if (show && treatmentTitle == null)
+        {
+            treatmentTitle = AddDetail("diagnosis-card-treatment");
+            treatmentPros = AddDetail("diagnosis-card-treatment-detail");
+            treatmentCons = AddDetail("diagnosis-card-treatment-detail");
+        }
+
+        if (treatmentTitle == null)
+        {
+            return;
+        }
+
+        treatmentTitle.text = show ? treatment.title : string.Empty;
+        treatmentPros.text = show && !string.IsNullOrWhiteSpace(treatment.pros) ? $"Pros: {treatment.pros}" : string.Empty;
+        treatmentCons.text = show && !string.IsNullOrWhiteSpace(treatment.cons) ? $"Cons: {treatment.cons}" : string.Empty;
+        DisplayStyle detail = show ? DisplayStyle.Flex : DisplayStyle.None;
+        treatmentTitle.style.display = detail;
+        treatmentPros.style.display = string.IsNullOrEmpty(treatmentPros.text) ? DisplayStyle.None : DisplayStyle.Flex;
+        treatmentCons.style.display = string.IsNullOrEmpty(treatmentCons.text) ? DisplayStyle.None : DisplayStyle.Flex;
+    }
+
+    Label AddDetail(string className)
+    {
+        Label label = new Label();
+        label.AddToClassList(className);
+        label.pickingMode = PickingMode.Ignore;
+        body.Add(label);
+        return label;
     }
 
     static void SetPickingIgnored(VisualElement element)

@@ -2,26 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>One line the nurse can say, and what the patient says back.</summary>
-[Serializable]
-public class TalkChoice
-{
-    [TextArea(1, 3)]
-    public string playerLine;
-    [TextArea(1, 4)]
-    public string patientResponse;
-}
-
-/// <summary>One stage of a shared decision: a short opening, then the nurse's choices.</summary>
-[Serializable]
-public class TalkStage
-{
-    [TextArea(1, 4)]
-    public string introduction;
-    public List<TalkChoice> choices = new List<TalkChoice>();
-}
-
-/// <summary>A treatment option shown during option talk, with its pros and cons.</summary>
+/// <summary>
+/// One treatment the player can discuss with the patient while sharing a diagnosis.
+/// <see cref="patientWants"/> is true when choosing it does not frustrate the patient.
+/// </summary>
 [Serializable]
 public class TreatmentOption
 {
@@ -30,36 +14,42 @@ public class TreatmentOption
     public string pros;
     [TextArea(1, 3)]
     public string cons;
+    [Tooltip("On when this is a treatment the patient is willing to accept.")]
+    public bool patientWants;
 }
 
 /// <summary>
-/// The Three-talk conversation for one diagnosis: team talk, option talk, then decision talk.
-/// Choice quality is not scored. Finishing the conversation is what marks the diagnosis as shared.
+/// What the player can share for one diagnosis: the patient's goals and fears, and the treatments
+/// to discuss. Nurse lines are fixed in the share screen. A diagnosis counts as shared only when
+/// every treatment's pros and cons were discussed and the decision was made with the patient.
 /// </summary>
 [Serializable]
 public class SharedDecisionTalk
 {
-    public List<TreatmentOption> options = new List<TreatmentOption>();
-    public TalkStage teamTalk = new TalkStage();
-    public TalkStage optionTalk = new TalkStage();
-    public TalkStage decisionTalk = new TalkStage();
+    [TextArea(2, 5)]
+    [Tooltip("Shown when the player explains the diagnosis and asks about the patient's goals.")]
+    public string goalsAndFears;
+    public List<TreatmentOption> treatments = new List<TreatmentOption>();
 
-    /// <summary>True when every stage has at least one choice the player can pick.</summary>
-    public bool HasScript => HasChoices(teamTalk) && HasChoices(optionTalk) && HasChoices(decisionTalk);
-
-    /// <summary>Stage 0 is team talk, 1 is option talk, 2 is decision talk.</summary>
-    public TalkStage StageAt(int index)
+    /// <summary>True when there is at least one treatment with a title.</summary>
+    public bool HasScript
     {
-        switch (index)
+        get
         {
-            case 0: return teamTalk;
-            case 1: return optionTalk;
-            default: return decisionTalk;
-        }
-    }
+            if (treatments == null)
+            {
+                return false;
+            }
 
-    static bool HasChoices(TalkStage stage)
-    {
-        return stage != null && stage.choices != null && stage.choices.Count > 0;
+            foreach (TreatmentOption treatment in treatments)
+            {
+                if (treatment != null && !string.IsNullOrWhiteSpace(treatment.title))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
     }
 }

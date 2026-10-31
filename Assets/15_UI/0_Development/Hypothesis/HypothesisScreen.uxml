@@ -7,6 +7,12 @@
                 <ui:Label name="hypothesis-title" text="Prioritise Hypotheses" class="hypothesis-title"/>
             </ui:Image>
             <ui:VisualElement name="header-actions" class="header-actions">
+                <ui:VisualElement name="frustration-meter" class="frustration-meter" style="display: none;">
+                    <ui:Label name="frustration-label" text="Frustration 20%" class="frustration-label"/>
+                    <ui:VisualElement class="frustration-track">
+                        <ui:VisualElement name="frustration-fill" class="frustration-fill"/>
+                    </ui:VisualElement>
+                </ui:VisualElement>
                 <ui:Button name="revise-button" text="Revise priorities" class="hypothesis-button hypothesis-button--wide" style="display: none;"/>
                 <ui:Button name="share-handover-button" text="Hand over" class="hypothesis-button hypothesis-button--primary" style="display: none;"/>
                 <ui:Button name="diagnose-button" text="Diagnose" class="hypothesis-button hypothesis-button--primary"/>
@@ -27,6 +33,10 @@
                 <ui:Label text="Patient" class="hypothesis-panel-title"/>
                 <ui:VisualElement name="patient-portrait" class="patient-portrait"/>
                 <ui:Label name="share-hint" text="Drag each diagnosis onto the patient to decide together." class="hypothesis-hint share-hint"/>
+                <ui:VisualElement class="share-patient-actions">
+                    <ui:Button name="ask-goals-button" text="Explain the diagnosis and ask about their goals" class="hypothesis-button ask-goals-button" style="display: none;"/>
+                    <ui:Button name="decide-button" text="Decide on the treatment" class="hypothesis-button hypothesis-button--wide" style="display: none;"/>
+                </ui:VisualElement>
             </ui:VisualElement>
         </ui:VisualElement>
         <ui:VisualElement name="hand" picking-mode="Ignore" class="hand"/>
