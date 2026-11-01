@@ -41,11 +41,10 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked += HandleHypothesisOpened; }
+        if (patient != null) { patient.OnExaminationFailed += HandleExaminationFailed; }
         if (hypothesisScreen != null)
         {
             hypothesisScreen.OnClosed += HandleHypothesisClosed;
-            hypothesisScreen.OnHandoverRequested += HandleHandover;
-            hypothesisScreen.OnExaminationFailed += HandleExaminationFailed;
         }
         if (handoverScreen != null)
         {
@@ -64,11 +63,10 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked -= HandleHypothesisOpened; }
+        if (patient != null) { patient.OnExaminationFailed -= HandleExaminationFailed; }
         if (hypothesisScreen != null)
         {
             hypothesisScreen.OnClosed -= HandleHypothesisClosed;
-            hypothesisScreen.OnHandoverRequested -= HandleHandover;
-            hypothesisScreen.OnExaminationFailed -= HandleExaminationFailed;
         }
         if (handoverScreen != null)
         {
@@ -175,7 +173,7 @@ public class HandoverFlow : MonoBehaviour
                 continue;
             }
 
-            if (hypothesisScreen.IsShared(diagnosis.id))
+            if (patient.IsDiagnosisShared(diagnosis.id))
             {
                 continue;
             }

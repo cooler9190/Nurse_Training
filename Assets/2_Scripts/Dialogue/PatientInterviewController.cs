@@ -23,7 +23,7 @@ using UnityEngine;
 public class PatientInterviewController : MonoBehaviour
 {
     public event Action OnInterviewStarted;
-    /// <summary>Raised when the interview closes (Done button or <see cref="EndInterview"/>).</summary>
+    /// <summary>Raised when the interview closes, for example when handover finishes the case.</summary>
     public event Action OnInterviewEnded;
     /// <summary>Raised when a question answer or ABCDE finding awards a cue. <see cref="Patient"/> listens to this.</summary>
     public event Action<RecognizedCue> OnCueRecognized;
@@ -49,8 +49,11 @@ public class PatientInterviewController : MonoBehaviour
     PatientProgress progress;
     string pendingQuestionId;
     int pendingExamination = -1;
+    Coroutine spokenLine;
 
     public bool IsPlaying => isPlaying;
+    /// <summary>True while a question or ABCDE line is still being shown.</summary>
+    public bool IsBusy => isBusy;
 
     void Awake()
     {
@@ -175,6 +178,7 @@ public class PatientInterviewController : MonoBehaviour
         SaveProgress();
 
         StopAllCoroutines();
+        spokenLine = null;
         isPlaying = false;
         isBusy = false;
         interview = null;
@@ -200,14 +204,12 @@ public class PatientInterviewController : MonoBehaviour
         {
             interviewUI.OnQuestionClicked += HandleQuestionClicked;
             interviewUI.OnAbcdeClicked += HandleAbcdeClicked;
-            interviewUI.OnDoneClicked += EndInterview;
             interviewUI.OnSkipRequested += HandleSkipRequested;
         }
         else
         {
             interviewUI.OnQuestionClicked -= HandleQuestionClicked;
             interviewUI.OnAbcdeClicked -= HandleAbcdeClicked;
-            interviewUI.OnDoneClicked -= EndInterview;
             interviewUI.OnSkipRequested -= HandleSkipRequested;
         }
     }
@@ -319,16 +321,71 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
+    /// Types a patient line with this patient's text speed and voice, then calls <paramref name="onComplete"/>.
+    /// <paramref name="keptText"/> stays on screen ahead of the typed line (for example pros and cons).
+    /// Clicking the dialogue box skips to the end, the same way interview answers do.
+    /// </summary>
+    public void PlayPatientLine(string speaker, string line, string keptText, Action onComplete)
+    {
+        if (spokenLine != null)
+        {
+            StopCoroutine(spokenLine);
+            spokenLine = null;
+            isBusy = false;
+        }
+
+        spokenLine = StartCoroutine(PlayPatientLineRoutine(speaker, line, keptText, onComplete));
+    }
+
+    IEnumerator PlayPatientLineRoutine(string speaker, string line, string keptText, Action onComplete)
+    {
+        if (!isPlaying || interview == null || interviewUI == null)
+        {
+            spokenLine = null;
+            onComplete?.Invoke();
+            yield break;
+        }
+
+        isBusy = true;
+        skipRequested = false;
+        interviewUI.SetQuestionsEnabled(false);
+
+        if (!string.IsNullOrEmpty(keptText))
+        {
+            interviewUI.SetSpeakerName("You");
+            interviewUI.SetDialogueText(keptText.TrimEnd());
+            float hold = playerLineHold;
+            while (hold > 0f && !skipRequested)
+            {
+                hold -= Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            skipRequested = false;
+        }
+
+        interviewUI.SetSpeakerName(speaker);
+        yield return TypePatientLine(line, true, keptText);
+        isBusy = false;
+        interviewUI.SetQuestionsEnabled(true);
+        spokenLine = null;
+        onComplete?.Invoke();
+    }
+
+    /// <summary>
     /// Typewriter effect: reveals <paramref name="line"/> one character every <c>SO_Patient.textSpeed</c>
     /// seconds, scaled by <c>textSpeedMultiplier</c>.
     /// Uses unscaled/realtime timing so it still works when the game is paused (timeScale 0).
     /// A skip request shows the full line immediately. When <paramref name="playVoice"/> is true, a voice
     /// blip plays every <c>SO_Patient.charactersPerVoiceBlip</c> characters, so the sound follows the text speed.
+    /// <paramref name="keptText"/> is shown in full before the typed line and is not voiced.
     /// </summary>
-    IEnumerator TypePatientLine(string line, bool playVoice = true)
+    IEnumerator TypePatientLine(string line, bool playVoice = true, string keptText = null)
     {
         string text = line ?? string.Empty;
-        interviewUI.SetDialogueText(string.Empty);
+        string head = string.IsNullOrEmpty(keptText) ? string.Empty : keptText.TrimEnd() + "\n\n";
+        string full = head + text;
+        interviewUI.SetDialogueText(head);
         float characterDelay = interview.textSpeed * textSpeedMultiplier;
         int blipInterval = Mathf.Max(1, interview.charactersPerVoiceBlip);
 
@@ -336,11 +393,11 @@ public class PatientInterviewController : MonoBehaviour
         {
             if (skipRequested)
             {
-                interviewUI.SetDialogueText(text);
+                interviewUI.SetDialogueText(full);
                 break;
             }
 
-            interviewUI.SetDialogueText(text.Substring(0, i + 1));
+            interviewUI.SetDialogueText(head + text.Substring(0, i + 1));
             yield return new WaitForSecondsRealtime(characterDelay);
 
             if (playVoice && i % blipInterval == 0)
@@ -349,7 +406,7 @@ public class PatientInterviewController : MonoBehaviour
             }
         }
 
-        interviewUI.SetDialogueText(text);
+        interviewUI.SetDialogueText(full);
         skipRequested = false;
     }
 
@@ -448,8 +505,8 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Rebuilds the question buttons from the unlocked questions, in their unlocked display order.
-    /// Already asked questions stay visible but are shown as asked (disabled).
+    /// Rebuilds the question buttons from the unlocked questions that have not been asked yet,
+    /// in their unlocked display order.
     /// </summary>
     void RefreshQuestions()
     {
@@ -461,8 +518,18 @@ public class PatientInterviewController : MonoBehaviour
         List<InterviewQuestionView> views = new List<InterviewQuestionView>();
         for (int i = 0; i < unlockedIds.Count; i++)
         {
+            if (askedIds.Contains(unlockedIds[i]))
+            {
+                continue;
+            }
+
             InterviewQuestion question = interview.FindQuestion(unlockedIds[i]);
-            views.Add(new InterviewQuestionView(question.id, question.questionText, askedIds.Contains(question.id)));
+            if (question == null)
+            {
+                continue;
+            }
+
+            views.Add(new InterviewQuestionView(question.id, question.questionText, false));
         }
 
         interviewUI.RebuildQuestions(views);

@@ -470,6 +470,10 @@
     background-color: rgb(32, 120, 96);
 }
 
+.diagnosis-card--decided {
+    opacity: 0.85;
+}
+
 .diagnosis-card-treatment {
     margin-top: 4px;
     font-size: 12px;
