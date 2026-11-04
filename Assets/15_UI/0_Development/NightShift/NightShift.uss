@@ -1,0 +1,167 @@
+.nightshift-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* Right-hand side of the ward map, so the rooms stay visible and clickable */
+.nightshift-panel {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    width: 340px;
+    max-height: 90%;
+    padding: 14px;
+    background-color: rgba(12, 30, 42, 0.94);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+    display: none;
+}
+
+.nightshift-title {
+    color: rgb(232, 244, 248);
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.nightshift-clock {
+    color: rgb(240, 200, 96);
+    font-size: 40px;
+    -unity-font-style: bold;
+    margin-top: 2px;
+}
+
+.nightshift-progress {
+    color: rgb(170, 200, 212);
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.nightshift-calls {
+    flex-shrink: 1;
+}
+
+.nightshift-call {
+    margin-bottom: 10px;
+    padding: 10px 12px;
+    background-color: rgb(246, 250, 252);
+    border-radius: 6px;
+    border-left-width: 6px;
+    border-color: rgb(214, 160, 40);
+    flex-shrink: 0;
+}
+
+.nightshift-call--done {
+    border-color: rgb(44, 140, 96);
+}
+
+.nightshift-call-top {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.nightshift-call-time {
+    color: rgb(18, 56, 74);
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-right: 10px;
+}
+
+.nightshift-call-bed {
+    color: rgb(60, 78, 90);
+    font-size: 14px;
+}
+
+.nightshift-call-hint {
+    color: rgb(28, 40, 48);
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.nightshift-call-result {
+    color: rgb(28, 100, 70);
+    font-size: 13px;
+    -unity-font-style: bold;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.nightshift-button {
+    height: 36px;
+    margin: 0;
+    background-color: rgb(18, 72, 92);
+    color: rgb(245, 250, 252);
+    font-size: 14px;
+    -unity-font-style: bold;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(122, 168, 186);
+}
+
+.nightshift-button:hover {
+    background-color: rgb(30, 96, 120);
+}
+
+.nightshift-button--primary {
+    background-color: rgb(32, 120, 96);
+}
+
+.nightshift-button--primary:hover {
+    background-color: rgb(44, 146, 118);
+}
+
+.nightshift-summary {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(6, 14, 20, 0.78);
+    display: none;
+}
+
+.nightshift-summary-card {
+    width: 520px;
+    max-height: 90%;
+    padding: 24px;
+    background-color: rgb(12, 30, 42);
+    border-radius: 10px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+}
+
+.nightshift-summary-title {
+    color: rgb(232, 244, 248);
+    font-size: 26px;
+    -unity-font-style: bold;
+}
+
+.nightshift-summary-score {
+    color: rgb(240, 200, 96);
+    font-size: 22px;
+    -unity-font-style: bold;
+    margin-top: 4px;
+    margin-bottom: 14px;
+}
+
+.nightshift-summary-list {
+    flex-shrink: 1;
+    margin-bottom: 14px;
+}
+
+.nightshift-summary-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+.nightshift-summary-actions > .nightshift-button {
+    width: 170px;
+    margin-left: 10px;
+}

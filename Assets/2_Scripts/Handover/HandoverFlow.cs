@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 /// <summary>
@@ -11,6 +12,9 @@ using UnityEngine;
 /// </summary>
 public class HandoverFlow : MonoBehaviour
 {
+    /// <summary>Raised when the player hands a patient over, with the score of that hand over.</summary>
+    public event Action<SO_Patient, ScoreBreakdown> OnHandedOver;
+
     [SerializeField] Patient patient;
     [SerializeField] PatientInterviewController controller;
     [SerializeField] PatientInterviewUI interviewUI;
@@ -102,8 +106,10 @@ public class HandoverFlow : MonoBehaviour
         }
 
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
+        ScoreBreakdown score = ScoreCalculator.Calculate(report);
         handoverOpen = true;
-        handoverScreen.Show(report, ScoreCalculator.Calculate(report));
+        handoverScreen.Show(report, score);
+        OnHandedOver?.Invoke(patient.Profile, score);
     }
 
     void HandleHandoverClosed()

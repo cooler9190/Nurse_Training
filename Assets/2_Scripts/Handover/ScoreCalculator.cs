@@ -162,7 +162,8 @@ public static class ScoreCalculator
         }
     }
 
-    static ScoreLevel LevelFor(float fraction)
+    /// <summary>The level for a share of the points, from 0 to 1.</summary>
+    public static ScoreLevel LevelFor(float fraction)
     {
         if (fraction >= 0.9f) { return ScoreLevel.Exemplary; }
         if (fraction >= 0.75f) { return ScoreLevel.Accomplished; }
