@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -24,6 +25,7 @@ public class HandoverFlow : MonoBehaviour
     bool interviewActive;
     bool hypothesisOpen;
     bool handoverOpen;
+    bool examinationFailed;
 
     void Awake()
     {
@@ -43,7 +45,11 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked += HandleHypothesisOpened; }
-        if (hypothesisScreen != null) { hypothesisScreen.OnClosed += HandleHypothesisClosed; }
+        if (patient != null) { patient.OnExaminationFailed += HandleExaminationFailed; }
+        if (hypothesisScreen != null)
+        {
+            hypothesisScreen.OnClosed += HandleHypothesisClosed;
+        }
         if (handoverScreen != null)
         {
             handoverScreen.OnHandoverClicked += HandleHandover;
@@ -61,7 +67,11 @@ public class HandoverFlow : MonoBehaviour
         }
 
         if (interviewUI != null) { interviewUI.OnCuesClicked -= HandleHypothesisOpened; }
-        if (hypothesisScreen != null) { hypothesisScreen.OnClosed -= HandleHypothesisClosed; }
+        if (patient != null) { patient.OnExaminationFailed -= HandleExaminationFailed; }
+        if (hypothesisScreen != null)
+        {
+            hypothesisScreen.OnClosed -= HandleHypothesisClosed;
+        }
         if (handoverScreen != null)
         {
             handoverScreen.OnHandoverClicked -= HandleHandover;
@@ -75,6 +85,7 @@ public class HandoverFlow : MonoBehaviour
         interviewActive = true;
         hypothesisOpen = false;
         handoverOpen = false;
+        examinationFailed = false;
         UpdateButton();
     }
 
@@ -82,6 +93,7 @@ public class HandoverFlow : MonoBehaviour
     {
         interviewActive = false;
         handoverOpen = false;
+        examinationFailed = false;
         handoverScreen.Hide();
         UpdateButton();
     }
@@ -105,8 +117,24 @@ public class HandoverFlow : MonoBehaviour
             return;
         }
 
+        ShowHandover();
+    }
+
+    void HandleExaminationFailed()
+    {
+        examinationFailed = true;
+        ShowHandover();
+    }
+
+    void ShowHandover()
+    {
+        if (patient == null || patient.Profile == null || hypothesisScreen == null || handoverScreen == null)
+        {
+            return;
+        }
+
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
-        ScoreBreakdown score = ScoreCalculator.Calculate(report);
+        ScoreBreakdown score = ScoreCalculator.Calculate(report, UnsharedDiagnoses(report), examinationFailed);
         handoverOpen = true;
         handoverScreen.Show(report, score);
         OnHandedOver?.Invoke(patient.Profile, score);
@@ -132,5 +160,33 @@ public class HandoverFlow : MonoBehaviour
     bool HasPriorities()
     {
         return patient != null && patient.Profile != null && patient.Profile.HasPriorities;
+    }
+
+    /// <summary>Titles of diagnoses on the player's list that have a talk and were not shared.</summary>
+    List<string> UnsharedDiagnoses(HandoverReport report)
+    {
+        List<string> titles = new List<string>();
+        if (hypothesisScreen == null || report.PlayerDiagnoses == null)
+        {
+            return titles;
+        }
+
+        foreach (RankedDiagnosis ranked in report.PlayerDiagnoses)
+        {
+            Diagnosis diagnosis = ranked.Diagnosis;
+            if (diagnosis == null || diagnosis.sharedDecision == null || !diagnosis.sharedDecision.HasScript)
+            {
+                continue;
+            }
+
+            if (patient.IsDiagnosisShared(diagnosis.id))
+            {
+                continue;
+            }
+
+            titles.Add(string.IsNullOrEmpty(diagnosis.title) ? diagnosis.id : diagnosis.title);
+        }
+
+        return titles;
     }
 }

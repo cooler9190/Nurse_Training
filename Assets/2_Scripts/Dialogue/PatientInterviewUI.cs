@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 /// <summary>
 /// View layer for the patient interview, built on UI Toolkit. It holds no game logic: it shows
-/// what it is told to (speaker, dialogue text, question buttons, cue count, patient folder,
+/// what it is told to (speaker, dialogue text, question buttons, patient folder, diagnosis hand,
 /// portrait hotspots) and reports player input through events, which
 /// <see cref="PatientInterviewController"/> and <see cref="Patient"/> listen to.
 /// <para>
@@ -25,13 +25,23 @@ public class PatientInterviewUI : MonoBehaviour
     public event Action<string> OnHotspotClicked;
     /// <summary>One of the five ABCDE examination buttons was clicked.</summary>
     public event Action<AbcdeLetter> OnAbcdeClicked;
-    public event Action OnDoneClicked;
-    /// <summary>The Cues button was clicked; <see cref="Patient"/> opens the hypothesis screen.</summary>
+    /// <summary>Prioritise hypotheses was clicked; <see cref="Patient"/> opens the hypothesis screen.</summary>
     public event Action OnCuesClicked;
+    /// <summary>Shared decision making was clicked in the patient file.</summary>
+    public event Action OnSharedDecisionClicked;
+    /// <summary>A diagnosis card was dropped on the patient during shared decision making.</summary>
+    public event Action<Diagnosis> OnDiagnosisDropped;
+    /// <summary>A shared-decision choice in the question box was clicked.</summary>
+    public event Action<int> OnShareChoiceClicked;
     /// <summary>The dialogue panel was clicked, meaning "skip / show the full line".</summary>
     public event Action OnSkipRequested;
 
     const int AbcdeCount = 5;
+    // Same fan as the cue hand on the hypothesis screen.
+    const float HandCardSpacing = 130f;
+    const float MaxHandSpread = 1000f;
+    const float HandTilt = 4f;
+    const float HandArc = 8f;
 
     UIDocument document;
     VisualElement documentRoot;
@@ -41,17 +51,35 @@ public class PatientInterviewUI : MonoBehaviour
     Sprite portraitSprite;
     Label speakerName;
     Label dialogueText;
+    Label frustrationReadout;
+    ScrollView questionScroll;
     VisualElement questionList;
-    Button doneButton;
+    ScrollView choiceScroll;
+    VisualElement choiceList;
     VisualElement dialoguePanel;
     VisualElement patientFolder;
     VisualElement folderContent;
+    VisualElement notesRoot;
+    VisualElement folderHand;
+    VisualElement diagnosisHand;
+    VisualElement dragLayer;
     Button folderTab;
     Button cueInventoryButton;
+    Button sharedDecisionButton;
     VisualElement abcdeBar;
     readonly Button[] abcdeButtons = new Button[AbcdeCount];
     readonly Action[] abcdeHandlers = new Action[AbcdeCount];
+    readonly List<string> chartNotes = new List<string>();
+    readonly List<RecognizedCue> cueNotes = new List<RecognizedCue>();
+    readonly List<DiagnosisCard> diagnosisCards = new List<DiagnosisCard>();
     bool questionsEnabled = true;
+    bool shareMode;
+    bool shareChoicesOpen;
+    bool shareLinePlaying;
+    DiagnosisCard hoveredDiagnosis;
+    DiagnosisCard diagnosisDrag;
+    DiagnosisCard diagnosisGhost;
+    int dragPointerId;
     readonly HashSet<string> foundHotspotIds = new HashSet<string>();
 
     /// <summary>
@@ -91,17 +119,29 @@ public class PatientInterviewUI : MonoBehaviour
 
     /// <summary>
     /// Resets the screen for a new patient: sets the portrait and its hotspots, fills the patient
-    /// folder (closed), resets the cue count and re-enables all ABCDE buttons.
+    /// folder (closed) and re-enables all ABCDE buttons. Diagnosis cards and shared decision making
+    /// are cleared.
     /// </summary>
     public void BeginPatient(SO_Patient patient)
     {
         EnsureBound();
         foundHotspotIds.Clear();
+        shareMode = false;
+        shareChoicesOpen = false;
+        shareLinePlaying = false;
         ApplyPortrait(patient != null ? patient.patientPortrait : null);
         RebuildHotspots(patient != null ? patient.visualHotspots : null);
-        patientFolder?.RemoveFromClassList("patient-folder--open");
+        SetFolderOpen(false);
         BuildFolder(patient);
-        SetCueCount(0);
+        HideShareChoices();
+        SetFrustration(0, false);
+        ClearDiagnosisCards();
+        PlaceDiagnosisHand();
+        UpdateSharedDecisionButton();
+        if (abcdeBar != null)
+        {
+            abcdeBar.style.display = DisplayStyle.Flex;
+        }
 
         for (int i = 0; i < AbcdeCount; i++)
         {
@@ -124,10 +164,29 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
-    /// <summary>Opens/closes the slide-out patient folder via the <c>patient-folder--open</c> USS class.</summary>
+    /// <summary>Opens or closes the full-screen patient file. The tab reads Close while it is open.</summary>
     void ToggleFolder()
     {
-        patientFolder?.ToggleInClassList("patient-folder--open");
+        if (patientFolder == null)
+        {
+            return;
+        }
+
+        SetFolderOpen(!patientFolder.ClassListContains("patient-folder--open"));
+    }
+
+    void SetFolderOpen(bool open)
+    {
+        if (patientFolder == null)
+        {
+            return;
+        }
+
+        patientFolder.EnableInClassList("patient-folder--open", open);
+        if (folderTab != null)
+        {
+            folderTab.text = open ? "Close" : "File";
+        }
     }
 
     /// <summary>
@@ -142,8 +201,11 @@ public class PatientInterviewUI : MonoBehaviour
         }
 
         folderContent.Clear();
+        notesRoot = null;
         if (patient == null)
         {
+            chartNotes.Clear();
+            cueNotes.Clear();
             return;
         }
 
@@ -158,26 +220,92 @@ public class PatientInterviewUI : MonoBehaviour
         bool hasAllergies = chart.allergies != null && chart.allergies.Count > 0;
         AddFolderRow("Allergies", hasAllergies ? string.Join(", ", chart.allergies) : "None known", hasAllergies);
 
-        if (chart.notes == null || chart.notes.Count == 0)
+        chartNotes.Clear();
+        cueNotes.Clear();
+        if (chart.notes != null)
+        {
+            for (int i = 0; i < chart.notes.Count; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(chart.notes[i]))
+                {
+                    chartNotes.Add(chart.notes[i].Trim());
+                }
+            }
+        }
+
+        notesRoot = new VisualElement { name = "folder-notes" };
+        folderContent.Add(notesRoot);
+        RefreshNotes();
+    }
+
+    /// <summary>Replaces the cue notes with <paramref name="cues"/>, after the chart notes.</summary>
+    public void SetCueNotes(IReadOnlyList<RecognizedCue> cues)
+    {
+        EnsureBound();
+        cueNotes.Clear();
+        if (cues != null)
+        {
+            for (int i = 0; i < cues.Count; i++)
+            {
+                cueNotes.Add(cues[i]);
+            }
+        }
+
+        RefreshNotes();
+    }
+
+    /// <summary>Appends one discovered cue to the Notes section.</summary>
+    public void AddCueNote(RecognizedCue cue)
+    {
+        EnsureBound();
+        cueNotes.Add(cue);
+        RefreshNotes();
+    }
+
+    void RefreshNotes()
+    {
+        if (notesRoot == null)
+        {
+            return;
+        }
+
+        notesRoot.Clear();
+        if (chartNotes.Count == 0 && cueNotes.Count == 0)
         {
             return;
         }
 
         Label notesTitle = new Label("Notes");
         notesTitle.AddToClassList("folder-section-title");
-        folderContent.Add(notesTitle);
+        notesRoot.Add(notesTitle);
 
-        for (int i = 0; i < chart.notes.Count; i++)
+        for (int i = 0; i < chartNotes.Count; i++)
         {
-            if (string.IsNullOrWhiteSpace(chart.notes[i]))
-            {
-                continue;
-            }
-
-            Label note = new Label($"- {chart.notes[i].Trim()}");
-            note.AddToClassList("folder-note");
-            folderContent.Add(note);
+            AddNote(chartNotes[i]);
         }
+
+        for (int i = 0; i < cueNotes.Count; i++)
+        {
+            AddNote(FormatCueNote(cueNotes[i]));
+        }
+    }
+
+    void AddNote(string text)
+    {
+        Label note = new Label($"- {text}");
+        note.AddToClassList("folder-note");
+        notesRoot.Add(note);
+    }
+
+    static string FormatCueNote(RecognizedCue cue)
+    {
+        string title = string.IsNullOrWhiteSpace(cue.Title) ? cue.Id : cue.Title.Trim();
+        if (string.IsNullOrWhiteSpace(cue.Description))
+        {
+            return title;
+        }
+
+        return $"{title} - {cue.Description.Trim()}";
     }
 
     /// <summary>Adds one "Label: value" row to the folder. <paramref name="alert"/> highlights the value.</summary>
@@ -220,16 +348,6 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
-    /// <summary>Updates the "Cues (n)" button label.</summary>
-    public void SetCueCount(int count)
-    {
-        EnsureBound();
-        if (cueInventoryButton != null)
-        {
-            cueInventoryButton.text = $"Cues ({count})";
-        }
-    }
-
     public void SetSpeakerName(string name)
     {
         if (speakerName != null)
@@ -247,8 +365,9 @@ public class PatientInterviewUI : MonoBehaviour
     }
 
     /// <summary>
-    /// Enables/disables the question list and the ABCDE bar together; used to block input while a
-    /// line is playing. The value is remembered and re-applied when the questions are rebuilt.
+    /// Enables or disables the question list, shared-decision choices and the ABCDE bar together.
+    /// Used to block input while a line is playing. The value is remembered and re-applied when
+    /// the questions are rebuilt. Hiding the ABCDE bar during shared decision making is separate.
     /// </summary>
     public void SetQuestionsEnabled(bool enabled)
     {
@@ -256,6 +375,11 @@ public class PatientInterviewUI : MonoBehaviour
         if (questionList != null)
         {
             questionList.SetEnabled(enabled);
+        }
+
+        if (choiceScroll != null)
+        {
+            choiceScroll.SetEnabled(enabled);
         }
 
         if (abcdeBar != null)
@@ -455,9 +579,13 @@ public class PatientInterviewUI : MonoBehaviour
         portrait = bindRoot.Q<VisualElement>("portrait");
         speakerName = bindRoot.Q<Label>("speaker-name");
         dialogueText = bindRoot.Q<Label>("dialogue-text");
-        ScrollView questionScroll = bindRoot.Q<ScrollView>("question-list");
+        frustrationReadout = bindRoot.Q<Label>("frustration-readout");
+        questionScroll = bindRoot.Q<ScrollView>("question-list");
         questionList = questionScroll != null ? questionScroll.contentContainer : bindRoot.Q<VisualElement>("question-list");
+        choiceScroll = bindRoot.Q<ScrollView>("share-choice-list");
+        choiceList = choiceScroll != null ? choiceScroll.contentContainer : null;
         cueInventoryButton = bindRoot.Q<Button>("cue-inventory-button");
+        sharedDecisionButton = bindRoot.Q<Button>("shared-decision-button");
 
         abcdeBar = bindRoot.Q<VisualElement>("abcde-bar");
         for (int i = 0; i < AbcdeCount; i++)
@@ -469,17 +597,14 @@ public class PatientInterviewUI : MonoBehaviour
             }
         }
 
-        doneButton = bindRoot.Q<Button>("done-button");
         dialoguePanel = bindRoot.Q<VisualElement>("dialogue-panel");
         patientFolder = bindRoot.Q<VisualElement>("patient-folder");
         ScrollView folderScroll = bindRoot.Q<ScrollView>("folder-content");
         folderContent = folderScroll != null ? folderScroll.contentContainer : null;
+        folderHand = bindRoot.Q<VisualElement>("folder-hand");
+        diagnosisHand = bindRoot.Q<VisualElement>("diagnosis-hand");
+        dragLayer = bindRoot.Q<VisualElement>("interview-drag-layer");
         folderTab = bindRoot.Q<Button>("folder-tab");
-
-        if (doneButton != null)
-        {
-            doneButton.clicked += HandleDoneClicked;
-        }
 
         if (folderTab != null)
         {
@@ -489,6 +614,12 @@ public class PatientInterviewUI : MonoBehaviour
         if (cueInventoryButton != null)
         {
             cueInventoryButton.clicked += HandleCuesClicked;
+        }
+
+        if (sharedDecisionButton != null)
+        {
+            sharedDecisionButton.clicked += HandleSharedDecisionClicked;
+            sharedDecisionButton.SetEnabled(false);
         }
 
         if (dialoguePanel != null)
@@ -505,10 +636,9 @@ public class PatientInterviewUI : MonoBehaviour
     /// <summary>Removes every callback added in <see cref="Bind"/> and drops all element references.</summary>
     void Unbind()
     {
-        if (doneButton != null)
-        {
-            doneButton.clicked -= HandleDoneClicked;
-        }
+        EndDiagnosisDrag();
+        diagnosisCards.Clear();
+        hoveredDiagnosis = null;
 
         if (folderTab != null)
         {
@@ -518,6 +648,11 @@ public class PatientInterviewUI : MonoBehaviour
         if (cueInventoryButton != null)
         {
             cueInventoryButton.clicked -= HandleCuesClicked;
+        }
+
+        if (sharedDecisionButton != null)
+        {
+            sharedDecisionButton.clicked -= HandleSharedDecisionClicked;
         }
 
         for (int i = 0; i < AbcdeCount; i++)
@@ -549,17 +684,20 @@ public class PatientInterviewUI : MonoBehaviour
         speakerName = null;
         dialogueText = null;
         questionList = null;
-        doneButton = null;
+        questionScroll = null;
+        choiceList = null;
+        choiceScroll = null;
         dialoguePanel = null;
         patientFolder = null;
         folderContent = null;
+        notesRoot = null;
+        folderHand = null;
+        diagnosisHand = null;
+        dragLayer = null;
         folderTab = null;
         cueInventoryButton = null;
-    }
-
-    void HandleDoneClicked()
-    {
-        OnDoneClicked?.Invoke();
+        sharedDecisionButton = null;
+        frustrationReadout = null;
     }
 
     void HandleCuesClicked()
@@ -567,9 +705,417 @@ public class PatientInterviewUI : MonoBehaviour
         OnCuesClicked?.Invoke();
     }
 
+    void HandleSharedDecisionClicked()
+    {
+        OnSharedDecisionClicked?.Invoke();
+    }
+
     void HandleDialoguePointerDown(PointerDownEvent evt)
     {
         OnSkipRequested?.Invoke();
+    }
+
+    /// <summary>Shows the frustration readout while shared decision making is active.</summary>
+    public void SetFrustration(int percent, bool visible)
+    {
+        EnsureBound();
+        if (frustrationReadout == null)
+        {
+            return;
+        }
+
+        frustrationReadout.text = $"Frustration {percent}%";
+        frustrationReadout.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+    }
+
+    /// <summary>
+    /// Builds the diagnosis hand in the patient file, or in the ABCDE slot if shared decision making
+    /// is already active. Cards are not draggable until <see cref="BeginSharedDecision"/>.
+    /// </summary>
+    public void ShowDiagnosisHand(
+        IReadOnlyList<RankedDiagnosis> results,
+        Func<string, bool> isShared,
+        Func<string, TreatmentOption> chosenTreatment,
+        Func<string, bool> isDecided)
+    {
+        EnsureBound();
+        ClearDiagnosisCards();
+        if (results != null)
+        {
+            for (int i = 0; i < results.Count; i++)
+            {
+                RankedDiagnosis result = results[i];
+                Diagnosis diagnosis = result.Diagnosis;
+                string id = diagnosis != null ? diagnosis.id : null;
+                bool shared = isShared != null && !string.IsNullOrEmpty(id) && isShared(id);
+                bool decided = isDecided != null && !string.IsNullOrEmpty(id) && isDecided(id);
+                TreatmentOption chosen = chosenTreatment != null && !string.IsNullOrEmpty(id) ? chosenTreatment(id) : null;
+                diagnosisCards.Add(CreateDiagnosisCard(result, shared, chosen, decided));
+            }
+        }
+
+        VisualElement parent = HandParent();
+        for (int i = 0; i < diagnosisCards.Count; i++)
+        {
+            parent?.Add(diagnosisCards[i]);
+        }
+
+        PlaceDiagnosisHand();
+        LayoutDiagnosisHand();
+        UpdateSharedDecisionButton();
+    }
+
+    /// <summary>
+    /// Closes the file, hides ABCDE and moves the diagnosis hand into that spot. Returns false when
+    /// there is nothing to share or sharing has already started.
+    /// </summary>
+    public bool BeginSharedDecision()
+    {
+        EnsureBound();
+        if (shareMode || diagnosisCards.Count == 0 || diagnosisHand == null)
+        {
+            return false;
+        }
+
+        shareMode = true;
+        SetFolderOpen(false);
+        if (abcdeBar != null)
+        {
+            abcdeBar.style.display = DisplayStyle.None;
+        }
+
+        for (int i = 0; i < diagnosisCards.Count; i++)
+        {
+            diagnosisHand.Add(diagnosisCards[i]);
+        }
+
+        PlaceDiagnosisHand();
+        LayoutDiagnosisHand();
+        UpdateSharedDecisionButton();
+        return true;
+    }
+
+    /// <summary>Writes a finished decision back onto the matching card and closes it to further talks.</summary>
+    public void UpdateDiagnosisCard(string diagnosisId, bool shared, TreatmentOption chosen)
+    {
+        if (string.IsNullOrEmpty(diagnosisId))
+        {
+            return;
+        }
+
+        for (int i = 0; i < diagnosisCards.Count; i++)
+        {
+            Diagnosis diagnosis = diagnosisCards[i].Result.Diagnosis;
+            if (diagnosis != null && diagnosis.id == diagnosisId)
+            {
+                diagnosisCards[i].SetShared(shared);
+                diagnosisCards[i].SetChosenTreatment(chosen);
+                diagnosisCards[i].SetDecided(true);
+            }
+        }
+    }
+
+    /// <summary>Blocks dragging a diagnosis while a patient line is being typed.</summary>
+    public void SetShareLinePlaying(bool playing)
+    {
+        shareLinePlaying = playing;
+    }
+
+    /// <summary>
+    /// Shows a shared-decision step. Choices replace the interview questions until the list is empty,
+    /// which brings the remaining questions back.
+    /// </summary>
+    public void ShowSharePrompt(string speaker, string dialogue, IReadOnlyList<string> choices)
+    {
+        EnsureBound();
+        if (speaker != null)
+        {
+            SetSpeakerName(speaker);
+        }
+
+        if (dialogue != null)
+        {
+            SetDialogueText(dialogue);
+        }
+
+        bool hasChoices = choices != null && choices.Count > 0;
+        shareChoicesOpen = hasChoices;
+        if (questionScroll != null)
+        {
+            questionScroll.style.display = hasChoices ? DisplayStyle.None : DisplayStyle.Flex;
+        }
+
+        if (choiceScroll != null)
+        {
+            choiceScroll.style.display = hasChoices ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        if (choiceList == null)
+        {
+            return;
+        }
+
+        choiceList.Clear();
+        if (!hasChoices)
+        {
+            return;
+        }
+
+        for (int i = 0; i < choices.Count; i++)
+        {
+            int index = i;
+            Button button = new Button(() => OnShareChoiceClicked?.Invoke(index))
+            {
+                text = choices[i]
+            };
+            button.AddToClassList("question-button");
+            button.style.whiteSpace = WhiteSpace.Normal;
+            button.style.height = StyleKeyword.Auto;
+            button.style.minHeight = 70;
+            choiceList.Add(button);
+        }
+    }
+
+    /// <summary>Hides shared-decision choices and shows the interview questions again.</summary>
+    public void HideShareChoices()
+    {
+        EnsureBound();
+        shareChoicesOpen = false;
+        if (questionScroll != null)
+        {
+            questionScroll.style.display = DisplayStyle.Flex;
+        }
+
+        if (choiceScroll != null)
+        {
+            choiceScroll.style.display = DisplayStyle.None;
+        }
+
+        choiceList?.Clear();
+    }
+
+    /// <summary>
+    /// Clears the current choices without showing interview questions yet.
+    /// Dragging stays blocked until the next step is shown.
+    /// </summary>
+    public void ClearShareChoices()
+    {
+        EnsureBound();
+        shareChoicesOpen = true;
+        choiceList?.Clear();
+        if (questionScroll != null)
+        {
+            questionScroll.style.display = DisplayStyle.None;
+        }
+
+        if (choiceScroll != null)
+        {
+            choiceScroll.style.display = DisplayStyle.None;
+        }
+    }
+
+    VisualElement HandParent()
+    {
+        return shareMode && diagnosisHand != null ? diagnosisHand : folderHand;
+    }
+
+    void PlaceDiagnosisHand()
+    {
+        bool hasCards = diagnosisCards.Count > 0;
+        if (folderHand != null)
+        {
+            folderHand.style.display = !shareMode && hasCards ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+
+        if (diagnosisHand != null)
+        {
+            diagnosisHand.style.display = shareMode && hasCards ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+    }
+
+    void UpdateSharedDecisionButton()
+    {
+        sharedDecisionButton?.SetEnabled(diagnosisCards.Count > 0 && !shareMode);
+    }
+
+    void ClearDiagnosisCards()
+    {
+        EndDiagnosisDrag();
+        hoveredDiagnosis = null;
+        diagnosisCards.Clear();
+        folderHand?.Clear();
+        diagnosisHand?.Clear();
+    }
+
+    DiagnosisCard CreateDiagnosisCard(RankedDiagnosis result, bool shared, TreatmentOption chosen, bool decided)
+    {
+        DiagnosisCard card = new DiagnosisCard(result, shared);
+        card.SetDecided(decided);
+        if (chosen != null)
+        {
+            card.SetChosenTreatment(chosen);
+        }
+
+        card.RegisterCallback<PointerEnterEvent>(_ => SetDiagnosisHovered(card, true));
+        card.RegisterCallback<PointerLeaveEvent>(_ => SetDiagnosisHovered(card, false));
+        card.RegisterCallback<PointerDownEvent>(evt => BeginDiagnosisDrag(card, evt));
+        card.RegisterCallback<PointerMoveEvent>(evt => UpdateDiagnosisDrag(card, evt));
+        card.RegisterCallback<PointerUpEvent>(evt => DropDiagnosis(card, evt));
+        card.RegisterCallback<PointerCaptureOutEvent>(_ => EndDiagnosisDrag());
+        return card;
+    }
+
+    void LayoutDiagnosisHand()
+    {
+        int count = diagnosisCards.Count;
+        float spacing = count > 1 ? Mathf.Min(HandCardSpacing, MaxHandSpread / (count - 1)) : 0f;
+        for (int i = 0; i < count; i++)
+        {
+            DiagnosisCard card = diagnosisCards[i];
+            float fromCentre = i - (count - 1) * 0.5f;
+            card.style.left = Length.Percent(50f);
+            card.style.marginLeft = fromCentre * spacing;
+            card.style.top = Mathf.Abs(fromCentre) * HandArc;
+            card.style.rotate = new Rotate(new Angle(fromCentre * HandTilt, AngleUnit.Degree));
+            card.BringToFront();
+        }
+
+        if (hoveredDiagnosis != null && diagnosisCards.Contains(hoveredDiagnosis))
+        {
+            hoveredDiagnosis.style.rotate = new Rotate(new Angle(0f, AngleUnit.Degree));
+            hoveredDiagnosis.BringToFront();
+        }
+    }
+
+    void SetDiagnosisHovered(DiagnosisCard card, bool hovered)
+    {
+        if (diagnosisDrag != null || !diagnosisCards.Contains(card))
+        {
+            return;
+        }
+
+        if (hovered)
+        {
+            hoveredDiagnosis = card;
+        }
+        else if (hoveredDiagnosis == card)
+        {
+            hoveredDiagnosis = null;
+        }
+
+        card.EnableInClassList("diagnosis-card--hovered", hovered);
+        LayoutDiagnosisHand();
+    }
+
+    void BeginDiagnosisDrag(DiagnosisCard card, PointerDownEvent evt)
+    {
+        if (evt.button != 0 || !shareMode || shareChoicesOpen || shareLinePlaying || card.Decided || diagnosisDrag != null || dragLayer == null)
+        {
+            return;
+        }
+
+        SetDiagnosisHovered(card, false);
+        diagnosisDrag = card;
+        dragPointerId = evt.pointerId;
+        card.AddToClassList("diagnosis-card--dragging");
+        card.CapturePointer(dragPointerId);
+
+        diagnosisGhost = new DiagnosisCard(card.Result, card.Shared) { pickingMode = PickingMode.Ignore };
+        diagnosisGhost.SetDecided(card.Decided);
+        diagnosisGhost.SetChosenTreatment(card.ChosenTreatment);
+        diagnosisGhost.AddToClassList("diagnosis-card--ghost");
+        dragLayer.Add(diagnosisGhost);
+        MoveDiagnosisGhost(evt.position);
+        evt.StopPropagation();
+    }
+
+    void UpdateDiagnosisDrag(DiagnosisCard card, PointerMoveEvent evt)
+    {
+        if (card != diagnosisDrag)
+        {
+            return;
+        }
+
+        MoveDiagnosisGhost(evt.position);
+        SetPortraitTargeted(IsOver(portraitFrame, evt.position));
+    }
+
+    void DropDiagnosis(DiagnosisCard card, PointerUpEvent evt)
+    {
+        if (card != diagnosisDrag)
+        {
+            return;
+        }
+
+        bool onPatient = IsOver(portraitFrame, evt.position);
+        Diagnosis diagnosis = card.Result.Diagnosis;
+        EndDiagnosisDrag();
+        if (onPatient && diagnosis != null)
+        {
+            OnDiagnosisDropped?.Invoke(diagnosis);
+        }
+    }
+
+    /// <summary>Clears the diagnosis drag and its ghost. Safe to call when no drag is active.</summary>
+    void EndDiagnosisDrag()
+    {
+        if (diagnosisDrag == null)
+        {
+            return;
+        }
+
+        DiagnosisCard card = diagnosisDrag;
+        diagnosisDrag = null;
+        card.RemoveFromClassList("diagnosis-card--dragging");
+        if (card.HasPointerCapture(dragPointerId))
+        {
+            card.ReleasePointer(dragPointerId);
+        }
+
+        diagnosisGhost?.RemoveFromHierarchy();
+        diagnosisGhost = null;
+        SetPortraitTargeted(false);
+    }
+
+    void MoveDiagnosisGhost(Vector2 panelPosition)
+    {
+        if (diagnosisGhost == null || dragLayer == null)
+        {
+            return;
+        }
+
+        Vector2 local = dragLayer.WorldToLocal(panelPosition);
+        diagnosisGhost.style.left = local.x;
+        diagnosisGhost.style.top = local.y;
+    }
+
+    void SetPortraitTargeted(bool targeted)
+    {
+        if (portraitFrame == null)
+        {
+            return;
+        }
+
+        float width = targeted ? 4f : 0f;
+        portraitFrame.style.borderTopWidth = width;
+        portraitFrame.style.borderRightWidth = width;
+        portraitFrame.style.borderBottomWidth = width;
+        portraitFrame.style.borderLeftWidth = width;
+        if (!targeted)
+        {
+            return;
+        }
+
+        Color color = new Color(53f / 255f, 234f / 255f, 198f / 255f);
+        portraitFrame.style.borderTopColor = color;
+        portraitFrame.style.borderRightColor = color;
+        portraitFrame.style.borderBottomColor = color;
+        portraitFrame.style.borderLeftColor = color;
+    }
+
+    static bool IsOver(VisualElement zone, Vector2 panelPosition)
+    {
+        return zone != null && zone.resolvedStyle.display != DisplayStyle.None && zone.worldBound.Contains(panelPosition);
     }
 }
 

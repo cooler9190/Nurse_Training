@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 /// <summary>
-/// Entry point for a patient scenario and the owner of the player's collected cues.
+/// Entry point for a patient scenario and the owner of the player's collected cues and shared decisions.
 /// <para>
 /// <see cref="Begin"/> resets the cue list, sets up the UI for the given <see cref="SO_Patient"/>
 /// (portrait, hotspots, folder) and starts the interview on <see cref="PatientInterviewController"/>.
@@ -13,18 +13,20 @@ using UnityEngine.Serialization;
 /// Cues come from two places: the controller (question answers and ABCDE findings, via
 /// <see cref="PatientInterviewController.OnCueRecognized"/>) and portrait hotspot clicks from
 /// <see cref="PatientInterviewUI"/>. Each cue id is only accepted once; new cues are stored,
-/// counted on the Cues button and re-broadcast through <see cref="OnCueRecognized"/> so other
-/// systems (scoring, tutorials, ...) can react without knowing about the interview internals.
+/// added to the patient file notes and re-broadcast through <see cref="OnCueRecognized"/>.
 /// </para>
 /// <para>
-/// Pressing the Cues button opens the <see cref="HypothesisScreenUI"/> with all collected cues and
-/// the patient's diagnoses, where the player ranks the cues.
+/// Prioritise hypotheses opens <see cref="HypothesisScreenUI"/>. After Diagnose, the diagnosis
+/// cards are shown in the patient file. Shared decision making moves that hand onto the interview
+/// and plays each diagnosis through <see cref="SharedDecisionSession"/>.
 /// </para>
 /// </summary>
 public class Patient : MonoBehaviour
 {
     /// <summary>Raised once for every cue the player discovers for the first time.</summary>
     public event Action<RecognizedCue> OnCueRecognized;
+    /// <summary>The patient's frustration reached the limit during shared decision making.</summary>
+    public event Action OnExaminationFailed;
 
     [SerializeField] PatientInterviewController interviewController;
     [SerializeField] PatientInterviewUI interviewUI;
@@ -35,11 +37,18 @@ public class Patient : MonoBehaviour
 
     readonly List<RecognizedCue> recognizedCues = new List<RecognizedCue>();
     readonly HashSet<string> recognizedIds = new HashSet<string>();
+    readonly SharedDecisionSession session = new SharedDecisionSession();
     PatientProgress progress;
 
     public SO_Patient Profile => profile;
     /// <summary>Cues found so far, in the order they were discovered.</summary>
     public IReadOnlyList<RecognizedCue> RecognizedCues => recognizedCues;
+
+    /// <summary>True when this diagnosis was discussed in full and decided with the patient.</summary>
+    public bool IsDiagnosisShared(string diagnosisId)
+    {
+        return session.IsShared(diagnosisId);
+    }
 
     /// <summary>Falls back to components on the same GameObject if references weren't assigned.</summary>
     void Awake()
@@ -88,6 +97,7 @@ public class Patient : MonoBehaviour
         profile = patientProfile;
         recognizedCues.Clear();
         recognizedIds.Clear();
+        session.Reset();
 
         // Bring back what the player already found with this patient
         progress = PatientProgressStore.Get(profile);
@@ -108,7 +118,7 @@ public class Patient : MonoBehaviour
                 interviewUI.MarkHotspotFound(progress.foundHotspotIds[i]);
             }
 
-            interviewUI.SetCueCount(recognizedCues.Count);
+            interviewUI.SetCueNotes(recognizedCues);
         }
 
         if (hypothesisScreen != null)
@@ -128,7 +138,7 @@ public class Patient : MonoBehaviour
         Begin(interview);
     }
 
-    /// <summary>Hooks up (or removes) the cue, hotspot and Cues button listeners on the controller and UI.</summary>
+    /// <summary>Hooks up (or removes) the cue, hotspot, file and diagnosis listeners.</summary>
     void Subscribe(bool subscribe)
     {
         if (interviewController != null)
@@ -149,11 +159,29 @@ public class Patient : MonoBehaviour
             {
                 interviewUI.OnHotspotClicked += HandleHotspotClicked;
                 interviewUI.OnCuesClicked += OpenHypothesisScreen;
+                interviewUI.OnSharedDecisionClicked += BeginSharedDecision;
+                interviewUI.OnDiagnosisDropped += HandleDiagnosisDropped;
+                interviewUI.OnShareChoiceClicked += HandleShareChoice;
             }
             else
             {
                 interviewUI.OnHotspotClicked -= HandleHotspotClicked;
                 interviewUI.OnCuesClicked -= OpenHypothesisScreen;
+                interviewUI.OnSharedDecisionClicked -= BeginSharedDecision;
+                interviewUI.OnDiagnosisDropped -= HandleDiagnosisDropped;
+                interviewUI.OnShareChoiceClicked -= HandleShareChoice;
+            }
+        }
+
+        if (hypothesisScreen != null)
+        {
+            if (subscribe)
+            {
+                hypothesisScreen.OnDiagnosed += HandleDiagnosed;
+            }
+            else
+            {
+                hypothesisScreen.OnDiagnosed -= HandleDiagnosed;
             }
         }
     }
@@ -171,8 +199,111 @@ public class Patient : MonoBehaviour
             return;
         }
 
-        hypothesisScreen.Open(recognizedCues, profile != null ? profile.diagnoses : null);
+        hypothesisScreen.Open(recognizedCues, profile);
     }
+
+    void HandleDiagnosed(IReadOnlyList<RankedDiagnosis> results)
+    {
+        if (!session.HasLeft)
+        {
+            session.CancelTalk();
+            if (interviewUI != null)
+            {
+                interviewUI.HideShareChoices();
+            }
+        }
+
+        if (interviewUI != null)
+        {
+            interviewUI.ShowDiagnosisHand(results, session.IsShared, session.ChosenTreatment, session.IsDecided);
+        }
+    }
+
+    void BeginSharedDecision()
+    {
+        if (interviewUI != null && interviewUI.BeginSharedDecision())
+        {
+            interviewUI.SetFrustration(session.Frustration, true);
+        }
+    }
+
+    void HandleDiagnosisDropped(Diagnosis diagnosis)
+    {
+        if (diagnosis == null || session.IsInProgress || session.HasLeft || session.IsDecided(diagnosis.id) || InterviewIsBusy)
+        {
+            return;
+        }
+
+        ApplyPrompt(session.Begin(diagnosis, profile != null ? profile.patientDisplayName : null));
+    }
+
+    void HandleShareChoice(int index)
+    {
+        if (InterviewIsBusy)
+        {
+            return;
+        }
+
+        ApplyPrompt(session.Choose(index));
+    }
+
+    void ApplyPrompt(SharePrompt prompt)
+    {
+        if (prompt == null || interviewUI == null)
+        {
+            return;
+        }
+
+        interviewUI.SetFrustration(prompt.Frustration, true);
+        interviewUI.ClearShareChoices();
+        if (string.IsNullOrEmpty(prompt.PatientLine))
+        {
+            if (prompt.Dialogue != null)
+            {
+                interviewUI.SetSpeakerName(string.IsNullOrEmpty(prompt.Speaker) ? "You" : prompt.Speaker);
+                interviewUI.SetDialogueText(prompt.Dialogue);
+            }
+
+            FinishPrompt(prompt);
+            return;
+        }
+
+        interviewUI.SetShareLinePlaying(true);
+        string speaker = string.IsNullOrEmpty(prompt.Speaker) ? "Patient" : prompt.Speaker;
+        if (interviewController != null)
+        {
+            interviewController.PlayPatientLine(speaker, prompt.PatientLine, prompt.Dialogue, () => FinishPrompt(prompt));
+            return;
+        }
+
+        interviewUI.SetSpeakerName(speaker);
+        interviewUI.SetDialogueText(string.IsNullOrEmpty(prompt.Dialogue)
+            ? prompt.PatientLine
+            : prompt.Dialogue + "\n\n" + prompt.PatientLine);
+        FinishPrompt(prompt);
+    }
+
+    void FinishPrompt(SharePrompt prompt)
+    {
+        if (interviewUI == null || prompt == null)
+        {
+            return;
+        }
+
+        interviewUI.SetShareLinePlaying(false);
+        interviewUI.ShowSharePrompt(null, null, prompt.Choices);
+        if (prompt.Finished)
+        {
+            interviewUI.UpdateDiagnosisCard(prompt.DiagnosisId, prompt.Shared, prompt.Chosen);
+        }
+
+        if (prompt.Leave)
+        {
+            OnExaminationFailed?.Invoke();
+        }
+    }
+
+    bool InterviewIsBusy => interviewController != null && interviewController.IsBusy;
 
     /// <summary>
     /// Player clicked a region on the portrait: mark it as found in the UI, award its cue and,
@@ -207,7 +338,7 @@ public class Patient : MonoBehaviour
     }
 
     /// <summary>
-    /// Records a cue if its id hasn't been seen yet, updates the cue count and raises
+    /// Records a cue if its id hasn't been seen yet, adds it to the patient file and raises
     /// <see cref="OnCueRecognized"/>. Returns false for duplicates or cues without an id.
     /// </summary>
     bool TryRecognize(RecognizedCue cue)
@@ -229,7 +360,7 @@ public class Patient : MonoBehaviour
 
         if (interviewUI != null)
         {
-            interviewUI.SetCueCount(recognizedCues.Count);
+            interviewUI.AddCueNote(cue);
         }
 
         return true;

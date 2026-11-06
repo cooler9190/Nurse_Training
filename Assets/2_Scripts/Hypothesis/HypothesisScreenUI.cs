@@ -5,22 +5,21 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 /// <summary>
-/// Full-screen "Prioritise Hypotheses" step. Collected cues are shown as a fanned hand of
-/// <see cref="CueCard"/>s at the bottom of the screen. The player drags cards into the ranking list
-/// on the left (most severe and urgent at the top) and presses Diagnose to get
-/// <see cref="DiagnosisCard"/>s on the right, ordered by <see cref="DiagnosisRanker"/>.
+/// Full-screen cue ranking. Collected cues are a fanned hand of <see cref="CueCard"/>s. The player
+/// drags them into the ranking list (most urgent at the top) and presses Diagnose. The screen then
+/// closes and the interview shows the resulting diagnosis cards.
 /// <para>
 /// How dragging works: the pressed card captures the pointer and stays where it is (dimmed) while
-/// a ghost copy follows the pointer in the drag layer. On release the card is moved into the ranking
-/// list at the drop position, or back to the hand if it was dropped anywhere else.
+/// a ghost copy follows the pointer in the drag layer. A card dropped on the ranking list is
+/// inserted there. A ranked card dropped anywhere else returns to the hand.
 /// </para>
-/// The ranking is remembered by cue id between openings and only cleared by <see cref="ResetRanking"/>.
+/// The cue ranking is remembered until <see cref="ResetRanking"/>.
 /// </summary>
 [RequireComponent(typeof(UIDocument))]
 public class HypothesisScreenUI : MonoBehaviour
 {
     public event Action OnClosed;
-    /// <summary>Raised after Diagnose with the prioritised diagnoses (may be empty).</summary>
+    /// <summary>Raised after Diagnose with the prioritised diagnoses (may be empty). The screen then closes.</summary>
     public event Action<IReadOnlyList<RankedDiagnosis>> OnDiagnosed;
 
     [Tooltip("Horizontal distance in pixels between neighbouring cards in the hand.")]
@@ -69,6 +68,8 @@ public class HypothesisScreenUI : MonoBehaviour
 
     void OnDisable()
     {
+        EndCueDrag();
+
         if (diagnoseButton != null)
         {
             diagnoseButton.clicked -= Diagnose;
@@ -87,11 +88,8 @@ public class HypothesisScreenUI : MonoBehaviour
         document = null;
     }
 
-    /// <summary>
-    /// Shows the screen with the given cues. Cues that were ranked before keep their place in the
-    /// ranking; all others are dealt into the hand.
-    /// </summary>
-    public void Open(IReadOnlyList<RecognizedCue> cues, IReadOnlyList<Diagnosis> patientDiagnoses)
+    /// <summary>Shows the ranking screen. Previously ranked cues keep their place.</summary>
+    public void Open(IReadOnlyList<RecognizedCue> cues, SO_Patient patient)
     {
         EnsureBound();
         if (document == null)
@@ -100,7 +98,7 @@ public class HypothesisScreenUI : MonoBehaviour
             return;
         }
 
-        diagnoses = patientDiagnoses;
+        diagnoses = patient != null ? patient.diagnoses : null;
         rankedCards.Clear();
         handCards.Clear();
         hoveredCard = null;
@@ -111,31 +109,38 @@ public class HypothesisScreenUI : MonoBehaviour
             int index = allCues.FindIndex(cue => cue.Id == id);
             if (index >= 0)
             {
-                rankedCards.Add(CreateCard(allCues[index]));
+                rankedCards.Add(CreateCueCard(allCues[index]));
                 allCues.RemoveAt(index);
             }
         }
 
         foreach (RecognizedCue cue in allCues)
         {
-            handCards.Add(CreateCard(cue));
+            handCards.Add(CreateCueCard(cue));
         }
 
-        RefreshCards();
+        RefreshCueCards();
         SetVisible(true);
     }
 
     public void Close()
     {
-        EndDrag();
+        EndCueDrag();
         SetVisible(false);
         OnClosed?.Invoke();
     }
 
-    /// <summary>Forgets the ranking, e.g. when a new patient starts.</summary>
+    /// <summary>Forgets the cue ranking.</summary>
     public void ResetRanking()
     {
         rankedIds.Clear();
+        rankedCards.Clear();
+        handCards.Clear();
+        EndCueDrag();
+        if (isOpen)
+        {
+            RefreshCueCards();
+        }
     }
 
     void EnsureBound()
@@ -186,27 +191,23 @@ public class HypothesisScreenUI : MonoBehaviour
             return;
         }
 
-        VisualElement root = document.rootVisualElement;
-        root.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        document.rootVisualElement.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
     }
 
-    CueCard CreateCard(RecognizedCue cue)
+    CueCard CreateCueCard(RecognizedCue cue)
     {
         CueCard card = new CueCard(cue);
-        card.RegisterCallback<PointerEnterEvent>(_ => SetHovered(card, true));
-        card.RegisterCallback<PointerLeaveEvent>(_ => SetHovered(card, false));
-        card.RegisterCallback<PointerDownEvent>(evt => BeginDrag(card, evt));
-        card.RegisterCallback<PointerMoveEvent>(evt => UpdateDrag(card, evt));
-        card.RegisterCallback<PointerUpEvent>(evt => Drop(card, evt));
-        card.RegisterCallback<PointerCaptureOutEvent>(_ => EndDrag());
+        card.RegisterCallback<PointerEnterEvent>(_ => SetCueHovered(card, true));
+        card.RegisterCallback<PointerLeaveEvent>(_ => SetCueHovered(card, false));
+        card.RegisterCallback<PointerDownEvent>(evt => BeginCueDrag(card, evt));
+        card.RegisterCallback<PointerMoveEvent>(evt => UpdateCueDrag(card, evt));
+        card.RegisterCallback<PointerUpEvent>(evt => DropCue(card, evt));
+        card.RegisterCallback<PointerCaptureOutEvent>(_ => EndCueDrag());
         return card;
     }
 
-    /// <summary>
-    /// Puts every card in its container (ranking list or hand) with the matching style and rank
-    /// number, and saves the ranking. Any shown diagnoses are cleared because they no longer match.
-    /// </summary>
-    void RefreshCards()
+    /// <summary>Puts every cue card in the ranking list or the hand and saves the ranking.</summary>
+    void RefreshCueCards()
     {
         rankingList?.Clear();
         hand?.Clear();
@@ -217,6 +218,7 @@ public class HypothesisScreenUI : MonoBehaviour
             card.RemoveFromClassList("cue-card--in-hand");
             card.RemoveFromClassList("cue-card--hovered");
             card.AddToClassList("cue-card--ranked");
+            card.SetOrientation(false);
             card.style.left = StyleKeyword.Null;
             card.style.top = StyleKeyword.Null;
             card.style.marginLeft = StyleKeyword.Null;
@@ -229,11 +231,12 @@ public class HypothesisScreenUI : MonoBehaviour
         {
             card.RemoveFromClassList("cue-card--ranked");
             card.AddToClassList("cue-card--in-hand");
+            card.SetOrientation(true);
             card.SetRank(0);
             hand?.Add(card);
         }
 
-        LayoutHand();
+        LayoutCueHand();
 
         rankedIds.Clear();
         rankedIds.AddRange(rankedCards.Select(card => card.Cue.Id));
@@ -244,14 +247,10 @@ public class HypothesisScreenUI : MonoBehaviour
         }
 
         diagnoseButton?.SetEnabled(rankedCards.Count > 0);
-        ShowDiagnoses(null);
+        ShowDiagnosisHint();
     }
 
-    /// <summary>
-    /// Fans the hand cards out from the centre: each card is offset sideways, tilted and lowered a
-    /// little more the further it is from the middle. The hovered card is straightened and drawn on top.
-    /// </summary>
-    void LayoutHand()
+    void LayoutCueHand()
     {
         int count = handCards.Count;
         float spacing = count > 1 ? Mathf.Min(handCardSpacing, maxHandSpread / (count - 1)) : 0f;
@@ -274,34 +273,44 @@ public class HypothesisScreenUI : MonoBehaviour
         }
     }
 
-    void SetHovered(CueCard card, bool hovered)
+    void SetCueHovered(CueCard card, bool hovered)
     {
-        if (dragCard != null || !handCards.Contains(card))
+        if (dragCard != null)
         {
             return;
         }
 
-        if (hovered)
+        bool inHand = handCards.Contains(card);
+        if (!inHand && !rankedCards.Contains(card))
         {
-            hoveredCard = card;
+            return;
         }
-        else if (hoveredCard == card)
+
+        if (inHand)
         {
-            hoveredCard = null;
+            if (hovered)
+            {
+                hoveredCard = card;
+            }
+            else if (hoveredCard == card)
+            {
+                hoveredCard = null;
+            }
+
+            LayoutCueHand();
         }
 
         card.EnableInClassList("cue-card--hovered", hovered);
-        LayoutHand();
     }
 
-    void BeginDrag(CueCard card, PointerDownEvent evt)
+    void BeginCueDrag(CueCard card, PointerDownEvent evt)
     {
         if (evt.button != 0 || dragCard != null || dragLayer == null)
         {
             return;
         }
 
-        SetHovered(card, false);
+        SetCueHovered(card, false);
         dragCard = card;
         dragPointerId = evt.pointerId;
         card.AddToClassList("cue-card--dragging");
@@ -309,23 +318,26 @@ public class HypothesisScreenUI : MonoBehaviour
 
         dragGhost = new CueCard(card.Cue) { pickingMode = PickingMode.Ignore };
         dragGhost.AddToClassList("cue-card--ghost");
+        dragGhost.SetOrientation(card.ClassListContains("cue-card--vertical"));
+        int rank = rankedCards.IndexOf(card);
+        dragGhost.SetRank(rank >= 0 ? rank + 1 : 0);
         dragLayer.Add(dragGhost);
-        MoveGhost(evt.position);
+        MoveGhost(dragGhost, evt.position);
         evt.StopPropagation();
     }
 
-    void UpdateDrag(CueCard card, PointerMoveEvent evt)
+    void UpdateCueDrag(CueCard card, PointerMoveEvent evt)
     {
         if (card != dragCard)
         {
             return;
         }
 
-        MoveGhost(evt.position);
-        rankingZone?.EnableInClassList("ranking-zone--drop-target", IsOverRankingZone(evt.position));
+        MoveGhost(dragGhost, evt.position);
+        rankingZone?.EnableInClassList("ranking-zone--drop-target", IsOver(rankingZone, evt.position));
     }
 
-    void Drop(CueCard card, PointerUpEvent evt)
+    void DropCue(CueCard card, PointerUpEvent evt)
     {
         if (card != dragCard)
         {
@@ -333,13 +345,13 @@ public class HypothesisScreenUI : MonoBehaviour
         }
 
         Vector2 position = evt.position;
-        EndDrag();
+        EndCueDrag();
 
-        if (IsOverRankingZone(position))
+        if (IsOver(rankingZone, position))
         {
             rankedCards.Remove(card);
             handCards.Remove(card);
-            rankedCards.Insert(DropIndex(position.y), card);
+            rankedCards.Insert(CueDropIndex(position.y), card);
         }
         else if (rankedCards.Remove(card))
         {
@@ -350,11 +362,11 @@ public class HypothesisScreenUI : MonoBehaviour
             return;
         }
 
-        RefreshCards();
+        RefreshCueCards();
     }
 
-    /// <summary>Clears the drag state and ghost. Safe to call when no drag is active.</summary>
-    void EndDrag()
+    /// <summary>Clears the cue drag and its ghost. Safe to call when no drag is active.</summary>
+    void EndCueDrag()
     {
         if (dragCard == null)
         {
@@ -375,20 +387,8 @@ public class HypothesisScreenUI : MonoBehaviour
         rankingZone?.RemoveFromClassList("ranking-zone--drop-target");
     }
 
-    void MoveGhost(Vector2 panelPosition)
-    {
-        Vector2 local = dragLayer.WorldToLocal(panelPosition);
-        dragGhost.style.left = local.x;
-        dragGhost.style.top = local.y;
-    }
-
-    bool IsOverRankingZone(Vector2 panelPosition)
-    {
-        return rankingZone != null && rankingZone.worldBound.Contains(panelPosition);
-    }
-
-    /// <summary>Index in the ranking where a card dropped at this height should go (the dragged card is not in the list).</summary>
-    int DropIndex(float panelY)
+    /// <summary>Index in the ranking where a cue dropped at this height should go.</summary>
+    int CueDropIndex(float panelY)
     {
         for (int i = 0; i < rankedCards.Count; i++)
         {
@@ -403,34 +403,46 @@ public class HypothesisScreenUI : MonoBehaviour
 
     void Diagnose()
     {
-        List<RankedDiagnosis> results = DiagnosisRanker.Rank(rankedCards.Select(card => card.Cue).ToList(), diagnoses);
-        ShowDiagnoses(results);
-        OnDiagnosed?.Invoke(results);
-    }
-
-    /// <summary>Shows the diagnosis cards, or the hint text when <paramref name="results"/> is null.</summary>
-    void ShowDiagnoses(IReadOnlyList<RankedDiagnosis> results)
-    {
-        if (diagnosisList == null)
+        if (rankedCards.Count == 0)
         {
             return;
         }
 
-        diagnosisList.Clear();
-        if (results != null)
-        {
-            foreach (RankedDiagnosis result in results)
-            {
-                diagnosisList.Add(new DiagnosisCard(result));
-            }
-        }
+        List<RankedDiagnosis> results = DiagnosisRanker.Rank(RankedCues(), diagnoses);
+        OnDiagnosed?.Invoke(results);
+        Close();
+    }
 
+    List<RecognizedCue> RankedCues()
+    {
+        return rankedCards.Select(card => card.Cue).ToList();
+    }
+
+    /// <summary>The right-hand panel only shows the instruction. Diagnosis cards are shown in the patient file.</summary>
+    void ShowDiagnosisHint()
+    {
+        diagnosisList?.Clear();
         if (diagnosisHint != null)
         {
-            diagnosisHint.text = results == null
-                ? "Rank your cues, then press Diagnose."
-                : "No diagnosis matches the ranked cues.";
-            diagnosisHint.style.display = results == null || results.Count == 0 ? DisplayStyle.Flex : DisplayStyle.None;
+            diagnosisHint.text = "Rank your cues, then press Diagnose.";
+            diagnosisHint.style.display = DisplayStyle.Flex;
         }
+    }
+
+    void MoveGhost(VisualElement ghost, Vector2 panelPosition)
+    {
+        if (ghost == null || dragLayer == null)
+        {
+            return;
+        }
+
+        Vector2 local = dragLayer.WorldToLocal(panelPosition);
+        ghost.style.left = local.x;
+        ghost.style.top = local.y;
+    }
+
+    static bool IsOver(VisualElement zone, Vector2 panelPosition)
+    {
+        return zone != null && zone.resolvedStyle.display != DisplayStyle.None && zone.worldBound.Contains(panelPosition);
     }
 }

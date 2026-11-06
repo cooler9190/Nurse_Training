@@ -15,7 +15,8 @@ using UnityEngine;
 /// <para>
 /// The correct answer used at hand over is also stored here: <see cref="solutionDiagnosisIds"/>,
 /// <see cref="correctCueOrder"/>, <see cref="prioritiesSummary"/> and each diagnosis's
-/// <see cref="Diagnosis.priorityReason"/> (see <c>PriorityEvaluator</c>).
+/// <see cref="Diagnosis.priorityReason"/> (see <c>PriorityEvaluator</c>). Each diagnosis can also
+/// carry a <see cref="Diagnosis.sharedDecision"/> conversation for sharing it with the patient.
 /// </para>
 /// </summary>
 [CreateAssetMenu(fileName = "SO_Patient", menuName = "Scriptable Objects/Patient")]
@@ -426,6 +427,8 @@ public class Diagnosis
     [TextArea(1, 4)]
     [Tooltip("Why this diagnosis sits where it does in the solution order. Shown at hand over.")]
     public string priorityReason;
+    [Tooltip("Team talk, option talk and decision talk played when this diagnosis is shared with the patient.")]
+    public SharedDecisionTalk sharedDecision = new SharedDecisionTalk();
 }
 
 /// <summary>One cue in the patient's correct cue order, with the reason it sits where it does.</summary>
