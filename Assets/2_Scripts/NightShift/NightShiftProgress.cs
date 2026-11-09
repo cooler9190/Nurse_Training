@@ -2,60 +2,107 @@ using System;
 using System.Collections.Generic;
 
 /// <summary>
-/// Tracks how far the player is through a night shift: which calls are done and what each hand over scored, plus
-/// the shift clock. Contains no UI code and does not touch Unity objects.
+/// Tracks the night shift: the shift clock, which calls are ringing, which are done and what each hand over scored.
+/// Contains no UI code and does not touch Unity objects.
 /// <para>
-/// A call counts as done once the player hands the patient over. Handing the same patient over again replaces the
-/// earlier score, so a retry is not stuck with the first attempt. The clock shows the shift start until a call is
-/// attended, then the time of that call.
+/// The clock runs from the start time to the end time over a fixed real-time length, so a 23:00 to 06:00 shift
+/// played over 20 minutes advances 21 clock minutes every real minute. Times after midnight count as the next day.
+/// A call rings once the clock reaches its time. A call is done once the player hands the patient over; handing the
+/// same patient over again replaces the earlier score. When the shift ends, calls that were not done count as 0%
+/// in the shift average.
 /// </para>
 /// </summary>
 public class NightShiftProgress
 {
-    readonly string startTime;
-    readonly List<string> callTimes;
+    const int MinutesPerDay = 1440;
+
+    readonly int startMinutes;
+    readonly int endMinutes;
+    readonly float lengthSeconds;
+    readonly int[] callMinutes;
     readonly int[] percents;
     readonly ScoreLevel[] levels;
     readonly bool[] done;
+    float elapsedSeconds;
 
-    public NightShiftProgress(string startTime, IReadOnlyList<string> callTimes)
+    /// <param name="startTime">Clock time the shift starts, as HH:mm.</param>
+    /// <param name="endTime">Clock time the shift ends, as HH:mm. It is the next day if it is not later than the start.</param>
+    /// <param name="lengthMinutes">How many real minutes the shift lasts.</param>
+    /// <param name="callTimes">When each call rings, as HH:mm. A time that cannot be read rings from the start.</param>
+    public NightShiftProgress(string startTime, string endTime, float lengthMinutes, IReadOnlyList<string> callTimes)
     {
-        this.startTime = startTime ?? string.Empty;
-        this.callTimes = new List<string>(callTimes ?? Array.Empty<string>());
-        percents = new int[this.callTimes.Count];
-        levels = new ScoreLevel[this.callTimes.Count];
-        done = new bool[this.callTimes.Count];
-        Clock = this.startTime;
+        startMinutes = ParseMinutes(startTime, 0);
+        int end = ParseMinutes(endTime, startMinutes);
+        endMinutes = end > startMinutes ? end : end + MinutesPerDay;
+        lengthSeconds = Math.Max(1f, lengthMinutes * 60f);
+
+        int count = callTimes != null ? callTimes.Count : 0;
+        callMinutes = new int[count];
+        for (int i = 0; i < count; i++)
+        {
+            int minutes = ParseMinutes(callTimes[i], -1);
+            callMinutes[i] = minutes < 0 ? startMinutes : (minutes < startMinutes ? minutes + MinutesPerDay : minutes);
+        }
+
+        percents = new int[count];
+        levels = new ScoreLevel[count];
+        done = new bool[count];
     }
 
-    public int CallCount => callTimes.Count;
-    /// <summary>The time on the ward clock.</summary>
-    public string Clock { get; private set; }
+    public int CallCount => callMinutes.Length;
     public int DoneCount { get; private set; }
     public bool IsComplete => CallCount > 0 && DoneCount == CallCount;
+    /// <summary>True once the clock has reached the end of the shift.</summary>
+    public bool IsOver => elapsedSeconds >= lengthSeconds;
+    /// <summary>How much of the shift has passed, from 0 to 1.</summary>
+    public float Elapsed01 => Math.Min(1f, elapsedSeconds / lengthSeconds);
+    /// <summary>The time on the ward clock, as HH:mm.</summary>
+    public string Clock => Format(startMinutes + (int)Math.Floor(Elapsed01 * (endMinutes - startMinutes)));
+    /// <summary>The clock time in minutes since the shift started, used to see which calls are ringing.</summary>
+    int ClockMinutes => startMinutes + (int)Math.Floor(Elapsed01 * (endMinutes - startMinutes));
 
-    /// <summary>Moves the clock to the time of the call the player is going to.</summary>
-    public void Attend(int index)
+    /// <summary>Moves the clock on by real time. Does nothing once the shift is over.</summary>
+    public void Tick(float seconds)
     {
-        if (IsValid(index))
+        if (seconds > 0f && !IsOver)
         {
-            Clock = callTimes[index];
+            elapsedSeconds = Math.Min(lengthSeconds, elapsedSeconds + seconds);
         }
     }
 
-    /// <summary>Records the score of a hand over for a call. Ignores a call that does not exist.</summary>
+    /// <summary>True once the clock has reached the time of the call.</summary>
+    public bool IsRinging(int index) => IsValid(index) && callMinutes[index] <= ClockMinutes;
+
+    /// <summary>How many calls are ringing now.</summary>
+    public int RingingCount
+    {
+        get
+        {
+            int count = 0;
+            for (int i = 0; i < CallCount; i++)
+            {
+                if (IsRinging(i)) { count++; }
+            }
+
+            return count;
+        }
+    }
+
+    /// <summary>A call that was never done and can no longer be, because the shift is over.</summary>
+    public bool IsMissed(int index) => IsValid(index) && IsOver && !done[index];
+
+    /// <summary>
+    /// Records the score of a hand over for a call. The first hand over is final, so a call cannot be retried for a
+    /// better score. Ignores a call that does not exist.
+    /// </summary>
     public void Complete(int index, int percent, ScoreLevel level)
     {
-        if (!IsValid(index))
+        if (!IsValid(index) || done[index])
         {
             return;
         }
 
-        if (!done[index])
-        {
-            DoneCount++;
-        }
-
+        DoneCount++;
         done[index] = true;
         percents[index] = percent;
         levels[index] = level;
@@ -65,12 +112,12 @@ public class NightShiftProgress
     public int Percent(int index) => IsValid(index) ? percents[index] : 0;
     public ScoreLevel Level(int index) => IsValid(index) ? levels[index] : ScoreLevel.Beginning;
 
-    /// <summary>The mean score of the calls done so far, rounded; 0 when none are done.</summary>
+    /// <summary>The mean score over every call, rounded. A call that was not done counts as 0%.</summary>
     public int AveragePercent
     {
         get
         {
-            if (DoneCount == 0)
+            if (CallCount == 0)
             {
                 return 0;
             }
@@ -84,7 +131,7 @@ public class NightShiftProgress
                 }
             }
 
-            return (int)Math.Round((double)total / DoneCount, MidpointRounding.AwayFromZero);
+            return (int)Math.Round((double)total / CallCount, MidpointRounding.AwayFromZero);
         }
     }
 
@@ -98,7 +145,31 @@ public class NightShiftProgress
         Array.Clear(levels, 0, levels.Length);
         Array.Clear(done, 0, done.Length);
         DoneCount = 0;
-        Clock = startTime;
+        elapsedSeconds = 0f;
+    }
+
+    /// <summary>Reads HH:mm into minutes since midnight, or returns the fallback when it cannot be read.</summary>
+    public static int ParseMinutes(string time, int fallback)
+    {
+        if (string.IsNullOrWhiteSpace(time))
+        {
+            return fallback;
+        }
+
+        string[] parts = time.Trim().Split(':');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out int hours) || !int.TryParse(parts[1], out int minutes)
+            || hours < 0 || hours > 23 || minutes < 0 || minutes > 59)
+        {
+            return fallback;
+        }
+
+        return hours * 60 + minutes;
+    }
+
+    static string Format(int minutes)
+    {
+        int wrapped = ((minutes % MinutesPerDay) + MinutesPerDay) % MinutesPerDay;
+        return $"{wrapped / 60:00}:{wrapped % 60:00}";
     }
 
     bool IsValid(int index) => index >= 0 && index < CallCount;

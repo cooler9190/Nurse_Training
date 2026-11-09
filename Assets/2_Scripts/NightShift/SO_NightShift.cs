@@ -14,8 +14,12 @@ using UnityEngine;
 public class SO_NightShift : ScriptableObject
 {
     public string shiftName = "Night shift";
-    [Tooltip("Clock time when the shift starts, e.g. 01:30.")]
-    public string startTime = "01:30";
+    [Tooltip("Clock time when the shift starts, e.g. 23:00.")]
+    public string startTime = "23:00";
+    [Tooltip("Clock time when the shift ends, e.g. 06:00. It is the next day when it is not later than the start.")]
+    public string endTime = "06:00";
+    [Tooltip("How many real minutes the whole shift lasts. The clock runs from the start to the end time over this long.")]
+    public float lengthMinutes = 20f;
     [Tooltip("The bell calls in the order they ring.")]
     public List<NightCall> calls = new List<NightCall>();
 
@@ -42,7 +46,7 @@ public class SO_NightShift : ScriptableObject
 [Serializable]
 public class NightCall
 {
-    [Tooltip("Clock time of the call, e.g. 02:10.")]
+    [Tooltip("Clock time the call starts ringing, e.g. 02:10. The player can attend it from then on.")]
     public string time;
     public string bed;
     [TextArea(1, 3)]

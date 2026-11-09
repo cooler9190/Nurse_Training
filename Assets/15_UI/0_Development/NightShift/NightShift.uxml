@@ -7,9 +7,15 @@
             <ui:Label name="nightshift-progress" text="" class="nightshift-progress" />
             <ui:ScrollView name="nightshift-calls" class="nightshift-calls" />
         </ui:VisualElement>
+        <ui:VisualElement name="nightshift-clockbar" class="nightshift-clockbar" picking-mode="Ignore">
+            <ui:Label name="nightshift-clockbar-time" text="23:00" class="nightshift-clockbar-time" picking-mode="Ignore" />
+            <ui:VisualElement class="nightshift-clockbar-track" picking-mode="Ignore">
+                <ui:VisualElement name="nightshift-clockbar-fill" class="nightshift-clockbar-fill" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement name="nightshift-summary" class="nightshift-summary">
             <ui:VisualElement class="nightshift-summary-card">
-                <ui:Label text="Shift complete" class="nightshift-summary-title" />
+                <ui:Label name="nightshift-summary-title" text="Shift complete" class="nightshift-summary-title" />
                 <ui:Label name="nightshift-summary-score" text="" class="nightshift-summary-score" />
                 <ui:ScrollView name="nightshift-summary-list" class="nightshift-summary-list" />
                 <ui:VisualElement class="nightshift-summary-actions">

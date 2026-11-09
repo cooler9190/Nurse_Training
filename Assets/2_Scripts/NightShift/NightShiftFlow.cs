@@ -2,11 +2,13 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Plays a night shift without changing the interview. While the player is on the ward map it shows the bell
-/// calls from <see cref="SO_NightShift"/> and the clock. Attending a call hides the map and starts that call's
-/// patient with <see cref="Patient.Begin"/>, the same way clicking a room does. A call is done when the player
-/// hands the patient over (<see cref="HandoverFlow.OnHandedOver"/>), which records the score. When every call is
-/// done and the player is back on the map, the end-of-shift summary shows.
+/// Plays a night shift without changing the interview. The shift clock runs in real time from the start time to
+/// the end time of <see cref="SO_NightShift"/> (see <see cref="NightShiftProgress"/>). While the player is on the
+/// ward map it shows the bell calls; a call can be attended once the clock reaches its time. Attending a call hides
+/// the map and starts that call's patient with <see cref="Patient.Begin"/>, the same way clicking a room does.
+/// A call is done when the player hands the patient over (<see cref="HandoverFlow.OnHandedOver"/>), which records
+/// the score. The summary shows when every call is done, or when the clock reaches the end of the shift: an
+/// interview still running is ended and calls that were not done count as 0%.
 /// Missing references are looked up in the scene.
 /// </summary>
 public class NightShiftFlow : MonoBehaviour
@@ -21,7 +23,10 @@ public class NightShiftFlow : MonoBehaviour
 
     NightShiftProgress progress;
     int current = -1;
+    int lastRinging;
+    bool callsShowing;
     bool summaryPending;
+    bool timeUpHandled;
 
     void Awake()
     {
@@ -72,6 +77,34 @@ public class NightShiftFlow : MonoBehaviour
         {
             ShowCalls();
         }
+        else if (screen != null && progress != null)
+        {
+            screen.SetClockBarVisible(true);
+        }
+    }
+
+    void Update()
+    {
+        if (progress == null || screen == null)
+        {
+            return;
+        }
+
+        progress.Tick(Time.unscaledDeltaTime);
+        screen.SetClock(progress.Clock, progress.Elapsed01);
+
+        // A call that has just started ringing needs the list to be rebuilt
+        int ringing = progress.RingingCount;
+        if (ringing != lastRinging)
+        {
+            lastRinging = ringing;
+            if (callsShowing) { ShowCalls(); }
+        }
+
+        if (progress.IsOver && !timeUpHandled)
+        {
+            HandleTimeUp();
+        }
     }
 
     void BuildProgress()
@@ -87,12 +120,12 @@ public class NightShiftFlow : MonoBehaviour
             times.Add(call != null ? call.time : string.Empty);
         }
 
-        progress = new NightShiftProgress(shift.startTime, times);
+        progress = new NightShiftProgress(shift.startTime, shift.endTime, shift.lengthMinutes, times);
     }
 
     void StartCall(int index)
     {
-        if (progress == null || patient == null || index < 0 || index >= shift.calls.Count)
+        if (progress == null || patient == null || progress.IsOver || index < 0 || index >= shift.calls.Count || !progress.IsRinging(index) || progress.IsDone(index))
         {
             return;
         }
@@ -104,8 +137,8 @@ public class NightShiftFlow : MonoBehaviour
         }
 
         current = index;
-        progress.Attend(index);
         if (hospitalRoot != null) { hospitalRoot.SetActive(false); }
+        callsShowing = false;
         screen.Hide();
         patient.Begin(call.patient);
 
@@ -133,14 +166,20 @@ public class NightShiftFlow : MonoBehaviour
     // Covers an interview started from a room on the map, not only from a call
     void HandleInterviewStarted()
     {
-        if (screen != null) { screen.Hide(); }
+        callsShowing = false;
+        if (screen != null)
+        {
+            screen.Hide();
+            screen.SetClockBarVisible(true);
+        }
     }
 
     void HandleInterviewEnded()
     {
         current = -1;
         if (hospitalRoot != null) { hospitalRoot.SetActive(true); }
-        if (summaryPending)
+        if (screen != null) { screen.SetClockBarVisible(false); }
+        if (summaryPending || (progress != null && progress.IsOver))
         {
             summaryPending = false;
             ShowSummary();
@@ -148,6 +187,20 @@ public class NightShiftFlow : MonoBehaviour
         else
         {
             ShowCalls();
+        }
+    }
+
+    // The shift is over: leave the patient the player is with, then show how the night went
+    void HandleTimeUp()
+    {
+        timeUpHandled = true;
+        if (controller != null && controller.IsPlaying)
+        {
+            controller.EndInterview();
+        }
+        else
+        {
+            ShowSummary();
         }
     }
 
@@ -159,7 +212,9 @@ public class NightShiftFlow : MonoBehaviour
         }
 
         progress.Reset();
+        lastRinging = 0;
         summaryPending = false;
+        timeUpHandled = false;
         ShowCalls();
     }
 
@@ -170,6 +225,8 @@ public class NightShiftFlow : MonoBehaviour
             return;
         }
 
+        callsShowing = true;
+        screen.SetClockBarVisible(false);
         screen.ShowCalls(shift.shiftName, progress.Clock, BuildCards());
     }
 
@@ -180,7 +237,9 @@ public class NightShiftFlow : MonoBehaviour
             return;
         }
 
-        screen.ShowSummary(shift.shiftName, progress.AveragePercent, progress.AverageLevel, BuildCards());
+        callsShowing = false;
+        screen.SetClockBarVisible(false);
+        screen.ShowSummary(shift.shiftName, progress.AveragePercent, progress.AverageLevel, BuildCards(), progress.IsOver);
     }
 
     List<NightCallCard> BuildCards()
@@ -195,7 +254,9 @@ public class NightShiftFlow : MonoBehaviour
                 Bed = call != null ? call.bed : string.Empty,
                 Hint = call != null && !string.IsNullOrWhiteSpace(call.hint) ? call.hint : "The call bell is ringing.",
                 PatientName = call != null && call.patient != null ? call.patient.patientDisplayName : string.Empty,
+                Ringing = progress.IsRinging(i),
                 Done = progress.IsDone(i),
+                Missed = progress.IsMissed(i),
                 Percent = progress.Percent(i),
                 Level = progress.Level(i)
             });

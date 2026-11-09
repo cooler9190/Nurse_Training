@@ -11,7 +11,11 @@ public class NightCallCard
     public string Hint;
     /// <summary>Only shown once the call is done, so the name does not give the case away beforehand.</summary>
     public string PatientName;
+    /// <summary>The clock has reached the time of the call.</summary>
+    public bool Ringing;
     public bool Done;
+    /// <summary>The shift ended before the call was done.</summary>
+    public bool Missed;
     public int Percent;
     public ScoreLevel Level;
 }
@@ -37,8 +41,15 @@ public class NightShiftScreenUI : MonoBehaviour
     Label clock;
     Label progress;
     VisualElement callList;
+    Label summaryTitle;
     Label summaryScore;
     VisualElement summaryList;
+    VisualElement clockBar;
+    Label clockBarTime;
+    VisualElement clockBarFill;
+    string lastClock = string.Empty;
+    float lastElapsed;
+    bool clockBarVisible;
     Button restartButton;
     Button closeButton;
     // What to show, kept so a request made before the UIDocument is ready is not lost
@@ -70,11 +81,47 @@ public class NightShiftScreenUI : MonoBehaviour
         Apply();
     }
 
-    /// <summary>Shows the end-of-shift summary.</summary>
-    public void ShowSummary(string shiftName, int percent, ScoreLevel level, IReadOnlyList<NightCallCard> cards)
+    /// <summary>Shows the end-of-shift summary. <paramref name="timeUp"/> is true when the clock ran out.</summary>
+    public void ShowSummary(string shiftName, int percent, ScoreLevel level, IReadOnlyList<NightCallCard> cards, bool timeUp = false)
     {
-        pendingView = () => ApplySummary(shiftName, percent, level, cards);
+        pendingView = () => ApplySummary(shiftName, percent, level, cards, timeUp);
         Apply();
+    }
+
+    /// <summary>Updates the clock on the call list and the small clock shown during an interview.</summary>
+    /// <param name="elapsed01">How much of the shift has passed, from 0 to 1.</param>
+    public void SetClock(string time, float elapsed01)
+    {
+        lastClock = time;
+        lastElapsed = elapsed01;
+        ApplyClock();
+    }
+
+    /// <summary>Shows or hides the small clock that stays on screen during an interview.</summary>
+    public void SetClockBarVisible(bool visible)
+    {
+        clockBarVisible = visible;
+        EnsureBound();
+        if (clockBar != null)
+        {
+            clockBar.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+    }
+
+    void ApplyClock()
+    {
+        if (document == null)
+        {
+            return;
+        }
+
+        if (clock != null) { clock.text = lastClock; }
+        if (clockBarTime != null) { clockBarTime.text = lastClock; }
+        if (clockBarFill != null)
+        {
+            clockBarFill.style.width = Length.Percent(Mathf.Clamp01(lastElapsed) * 100f);
+            clockBarFill.EnableInClassList("nightshift-clockbar-fill--late", lastElapsed > 0.9f);
+        }
     }
 
     public void Hide()
@@ -117,15 +164,17 @@ public class NightShiftScreenUI : MonoBehaviour
         panel.style.display = DisplayStyle.Flex;
     }
 
-    void ApplySummary(string shiftName, int percent, ScoreLevel level, IReadOnlyList<NightCallCard> cards)
+    void ApplySummary(string shiftName, int percent, ScoreLevel level, IReadOnlyList<NightCallCard> cards, bool timeUp)
     {
+        if (summaryTitle != null) { summaryTitle.text = timeUp ? "Shift over - 06:00" : "Shift complete"; }
         summaryScore.text = $"{shiftName}: {percent}% - {level}";
         summaryList.Clear();
         foreach (NightCallCard card in cards)
         {
             VisualElement row = BuildCard(card);
-            Label result = new Label(card.Done ? $"{card.PatientName}: {card.Percent}% - {card.Level}" : "Not attended");
+            Label result = new Label(card.Done ? $"{card.PatientName}: {card.Percent}% - {card.Level}" : "Missed - 0%");
             result.AddToClassList("nightshift-call-result");
+            if (!card.Done) { result.AddToClassList("nightshift-call-result--missed"); }
             row.Add(result);
             summaryList.Add(row);
         }
@@ -137,16 +186,33 @@ public class NightShiftScreenUI : MonoBehaviour
     VisualElement BuildCall(int index, NightCallCard card)
     {
         VisualElement element = BuildCard(card);
+        if (!card.Done && !card.Ringing && !card.Missed)
+        {
+            element.AddToClassList("nightshift-call--waiting");
+        }
+
+        // A call is attended once, so a finished call only shows its result
         if (card.Done)
         {
             Label result = new Label($"{card.PatientName}: {card.Percent}% - {card.Level}");
             result.AddToClassList("nightshift-call-result");
             element.Add(result);
+            return element;
         }
 
-        Button go = new Button(() => OnCallClicked?.Invoke(index)) { text = card.Done ? "Attend again" : "Attend" };
+        if (card.Missed)
+        {
+            Label missed = new Label("Missed - the shift ended - 0%");
+            missed.AddToClassList("nightshift-call-result");
+            missed.AddToClassList("nightshift-call-result--missed");
+            element.Add(missed);
+            return element;
+        }
+
+        Button go = new Button(() => OnCallClicked?.Invoke(index)) { text = card.Ringing ? "Attend" : "Not ringing yet" };
         go.AddToClassList("nightshift-button");
-        if (!card.Done) { go.AddToClassList("nightshift-button--primary"); }
+        if (card.Ringing) { go.AddToClassList("nightshift-button--primary"); }
+        go.SetEnabled(card.Ringing);
         element.Add(go);
         return element;
     }
@@ -167,7 +233,8 @@ public class NightShiftScreenUI : MonoBehaviour
         top.Add(bed);
         element.Add(top);
 
-        Label hint = new Label(card.Hint);
+        // A call that has not rung yet gives nothing away
+        Label hint = new Label(card.Ringing || card.Done || card.Missed ? card.Hint : "Quiet for now.");
         hint.AddToClassList("nightshift-call-hint");
         element.Add(hint);
         return element;
@@ -203,7 +270,11 @@ public class NightShiftScreenUI : MonoBehaviour
         clock = root.Q<Label>("nightshift-clock");
         progress = root.Q<Label>("nightshift-progress");
         callList = root.Q<ScrollView>("nightshift-calls")?.contentContainer;
+        summaryTitle = root.Q<Label>("nightshift-summary-title");
         summaryScore = root.Q<Label>("nightshift-summary-score");
+        clockBar = root.Q<VisualElement>("nightshift-clockbar");
+        clockBarTime = root.Q<Label>("nightshift-clockbar-time");
+        clockBarFill = root.Q<VisualElement>("nightshift-clockbar-fill");
         summaryList = root.Q<ScrollView>("nightshift-summary-list")?.contentContainer;
         restartButton = root.Q<Button>("nightshift-restart");
         closeButton = root.Q<Button>("nightshift-close");
@@ -220,6 +291,8 @@ public class NightShiftScreenUI : MonoBehaviour
 
         panel.style.display = DisplayStyle.None;
         summary.style.display = DisplayStyle.None;
+        if (clockBar != null) { clockBar.style.display = clockBarVisible ? DisplayStyle.Flex : DisplayStyle.None; }
+        ApplyClock();
         pendingView?.Invoke();
     }
 }
