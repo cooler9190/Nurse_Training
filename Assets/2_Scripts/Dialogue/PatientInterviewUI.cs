@@ -52,6 +52,10 @@ public class PatientInterviewUI : MonoBehaviour
     Label speakerName;
     Label dialogueText;
     Label frustrationReadout;
+    Label frustrationMood;
+    VisualElement frustrationMeter;
+    VisualElement frustrationFill;
+    int lastFrustration = -1;
     ScrollView questionScroll;
     VisualElement questionList;
     ScrollView choiceScroll;
@@ -580,7 +584,10 @@ public class PatientInterviewUI : MonoBehaviour
         speakerName = bindRoot.Q<Label>("speaker-name");
         dialogueText = bindRoot.Q<Label>("dialogue-text");
         frustrationReadout = bindRoot.Q<Label>("frustration-readout");
-        questionScroll = bindRoot.Q<ScrollView>("question-list");
+        frustrationMood = bindRoot.Q<Label>("frustration-mood");
+        frustrationMeter = bindRoot.Q<VisualElement>("frustration-meter");
+        frustrationFill = bindRoot.Q<VisualElement>("frustration-fill");
+        questionScroll =bindRoot.Q<ScrollView>("question-list");
         questionList = questionScroll != null ? questionScroll.contentContainer : bindRoot.Q<VisualElement>("question-list");
         choiceScroll = bindRoot.Q<ScrollView>("share-choice-list");
         choiceList = choiceScroll != null ? choiceScroll.contentContainer : null;
@@ -698,6 +705,10 @@ public class PatientInterviewUI : MonoBehaviour
         cueInventoryButton = null;
         sharedDecisionButton = null;
         frustrationReadout = null;
+        frustrationMood = null;
+        frustrationMeter = null;
+        frustrationFill = null;
+        lastFrustration = -1;
     }
 
     void HandleCuesClicked()
@@ -715,17 +726,64 @@ public class PatientInterviewUI : MonoBehaviour
         OnSkipRequested?.Invoke();
     }
 
-    /// <summary>Shows the frustration readout while shared decision making is active.</summary>
+    /// <summary>
+    /// Shows the frustration meter while shared decision making is active: a bar that fills and changes colour,
+    /// a mood word, and a small bump when the frustration goes up.
+    /// </summary>
     public void SetFrustration(int percent, bool visible)
     {
         EnsureBound();
-        if (frustrationReadout == null)
+        if (frustrationReadout == null || frustrationMeter == null)
         {
             return;
         }
 
+        percent = Mathf.Clamp(percent, 0, 100);
         frustrationReadout.text = $"Frustration {percent}%";
-        frustrationReadout.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+
+        string level = FrustrationLevel(percent);
+        if (frustrationFill != null)
+        {
+            frustrationFill.style.width = Length.Percent(percent);
+            foreach (string name in FrustrationLevels)
+            {
+                frustrationFill.EnableInClassList("fm-fill--" + name, name == level);
+                frustrationMood?.EnableInClassList("fm-mood--" + name, name == level);
+            }
+        }
+
+        if (frustrationMood != null) { frustrationMood.text = FrustrationMood(level); }
+
+        // Bump the meter when the frustration rises while it is on screen
+        bool rose = visible && lastFrustration >= 0 && percent > lastFrustration;
+        lastFrustration = visible ? percent : -1;
+        frustrationMeter.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        if (rose)
+        {
+            frustrationMeter.AddToClassList("fm-meter--bump");
+            frustrationMeter.schedule.Execute(() => frustrationMeter?.RemoveFromClassList("fm-meter--bump")).StartingIn(220);
+        }
+    }
+
+    static readonly string[] FrustrationLevels = { "calm", "uneasy", "upset", "leaving" };
+
+    static string FrustrationLevel(int percent)
+    {
+        if (percent >= 85) { return "leaving"; }
+        if (percent >= 60) { return "upset"; }
+        if (percent >= 35) { return "uneasy"; }
+        return "calm";
+    }
+
+    static string FrustrationMood(string level)
+    {
+        switch (level)
+        {
+            case "leaving": return "About to leave";
+            case "upset": return "Frustrated";
+            case "uneasy": return "Uneasy";
+            default: return "Calm";
+        }
     }
 
     /// <summary>

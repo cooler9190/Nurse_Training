@@ -206,14 +206,78 @@
     color: rgb(18, 56, 74);
 }
 
-.frustration-readout {
+/* Frustration meter: a bar that fills and changes colour as the patient gets more frustrated */
+.fm-meter {
     position: absolute;
-    top: -28px;
-    right: 48px;
-    color: rgb(255, 214, 170);
-    font-size: 16px;
+    top: 24px;
+    left: 50%;
+    margin-left: -480px;
+    width: 290px;
+    padding: 6px 10px 8px 10px;
+    background-color: rgba(12, 30, 42, 0.9);
+    border-radius: 8px;
+    border-width: 2px;
+    border-color: rgb(122, 168, 186);
+    transition-property: scale, border-color;
+    transition-duration: 0.18s;
+}
+
+.fm-meter--bump {
+    scale: 1.07 1.07;
+    border-color: rgb(236, 110, 90);
+}
+
+.fm-top {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.fm-readout {
+    color: rgb(232, 244, 248);
+    font-size: 14px;
     -unity-font-style: bold;
 }
+
+.fm-mood {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: rgb(110, 200, 140);
+}
+
+.fm-track {
+    height: 14px;
+    background-color: rgb(40, 66, 82);
+    border-radius: 7px;
+    border-width: 1px;
+    border-color: rgb(8, 20, 28);
+}
+
+.fm-fill {
+    height: 100%;
+    width: 0;
+    border-radius: 7px;
+    background-color: rgb(70, 170, 110);
+    transition-property: width, background-color;
+    transition-duration: 0.5s;
+}
+
+.fm-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background-color: rgba(232, 244, 248, 0.35);
+}
+
+.fm-fill--uneasy { background-color: rgb(226, 190, 70); }
+.fm-fill--upset { background-color: rgb(232, 132, 56); }
+.fm-fill--leaving { background-color: rgb(210, 60, 52); }
+
+.fm-mood--uneasy { color: rgb(236, 204, 90); }
+.fm-mood--upset { color: rgb(240, 150, 76); }
+.fm-mood--leaving { color: rgb(240, 96, 84); }
 
 .dialogue-text {
     font-size: 20px;

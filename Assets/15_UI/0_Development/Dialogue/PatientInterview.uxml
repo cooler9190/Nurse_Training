@@ -13,11 +13,21 @@
         <ui:VisualElement name="portrait-frame" class="portrait-frame" style="background-color: rgba(18, 42, 58, 0); left: 800px; bottom: 0%; position: absolute; width: 570px; height: 880px; border-top-width: 0; border-right-width: 0; border-bottom-width: 0; border-left-width: 0;">
             <ui:VisualElement name="portrait" class="portrait"/>
         </ui:VisualElement>
+        <ui:VisualElement name="frustration-meter" class="fm-meter" style="display: none;">
+            <ui:VisualElement class="fm-top">
+                <ui:Label name="frustration-readout" text="Frustration 20%" class="fm-readout"/>
+                <ui:Label name="frustration-mood" text="Calm" class="fm-mood"/>
+            </ui:VisualElement>
+            <ui:VisualElement class="fm-track">
+                <ui:VisualElement name="frustration-fill" class="fm-fill"/>
+                <ui:VisualElement class="fm-tick" style="left: 50%;"/>
+                <ui:VisualElement class="fm-tick" style="left: 75%;"/>
+            </ui:VisualElement>
+        </ui:VisualElement>
         <ui:VisualElement name="dialogue-panel" class="dialogue-panel" style="height: 250px; width: 1293px; padding-left: 70px; padding-top: 35px; padding-right: 90px; padding-bottom: 50px;">
             <ui:VisualElement class="dialogue-header" style="top: -55px; width: 1220px; left: 89px;">
                 <ui:Image source="project://database/Assets/9_Sprites/1_UI/DialogueTitleBox.png?fileID=21300000&amp;guid=f5c45b39b018ccf469b078c2a2c0b2b0&amp;type=3#DialogueTitleBox" style="position: absolute; height: 83px; top: -19px; width: 272px;"/>
                 <ui:Label name="speaker-name" text="Patient" class="speaker-name" style="left: 42px; color: rgb(255, 255, 255);"/>
-                <ui:Label name="frustration-readout" text="Frustration 20%" class="frustration-readout" style="display: none;"/>
             </ui:VisualElement>
             <ui:Label name="dialogue-text" text="" class="dialogue-text" style="top: -38px;"/>
         </ui:VisualElement>
