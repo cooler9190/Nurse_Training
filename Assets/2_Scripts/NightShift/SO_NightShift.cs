@@ -20,6 +20,9 @@ public class SO_NightShift : ScriptableObject
     public string endTime = "06:00";
     [Tooltip("How many real minutes the whole shift lasts. The clock runs from the start to the end time over this long.")]
     public float lengthMinutes = 20f;
+    [Tooltip("How many times faster the clock runs while the player is on the ward map with nobody waiting, so there is no dead time before the next call. 1 turns it off. The clock runs normally during an interview.")]
+    [Min(1f)]
+    public float idleSpeedUp = 1f;
     [Tooltip("The bell calls in the order they ring.")]
     public List<NightCall> calls = new List<NightCall>();
 
@@ -49,6 +52,8 @@ public class NightCall
     [Tooltip("Clock time the call starts ringing, e.g. 02:10. The player can attend it from then on.")]
     public string time;
     public string bed;
+    [Tooltip("The room on the map that blinks while this call rings, for example \"Room 2\". It matches part of the room's name. Leave empty to use the room that holds this patient. The room shows this call's patient while it rings.")]
+    public string room;
     [TextArea(1, 3)]
     [Tooltip("What the nurse hears when the bell rings. Keep it to what a person on the ward could notice, not the diagnosis.")]
     public string hint;

@@ -12,6 +12,7 @@ public class HospitalRoomPicker : MonoBehaviour
     [SerializeField] float noticeSeconds = 2.5f;
 
     HospitalLabel[] labels = new HospitalLabel[0];
+    PatientRoom[] rooms = new PatientRoom[0];
     PatientRoom hovered;
     string notice;
     float noticeUntil;
@@ -30,7 +31,21 @@ public class HospitalRoomPicker : MonoBehaviour
         if (hospitalRoot != null)
         {
             labels = hospitalRoot.GetComponentsInChildren<HospitalLabel>(true);
+            rooms = hospitalRoot.GetComponentsInChildren<PatientRoom>(true);
         }
+    }
+
+    bool AnyRoomCalling()
+    {
+        for (int i = 0; i < rooms.Length; i++)
+        {
+            if (rooms[i] != null && rooms[i].IsCalling)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     void OnEnable()
@@ -86,6 +101,12 @@ public class HospitalRoomPicker : MonoBehaviour
     void Select(PatientRoom room)
     {
         GameAudio.PlayClick();
+        if (room.RequiresCall && !room.IsCalling)
+        {
+            ShowNotice($"{room.RoomName}: nobody is calling from here right now.");
+            return;
+        }
+
         if (!room.HasPatient)
         {
             ShowNotice($"{room.RoomName}: no patient assigned yet.");
@@ -198,11 +219,19 @@ public class HospitalRoomPicker : MonoBehaviour
             GUI.Box(rect, GUIContent.none);
             GUI.color = Color.white;
             GUI.Label(rect, label.Text, labelStyle);
+
+            // A room that is calling the nurse gets a blinking badge above its name
+            PatientRoom calling = label.GetComponent<PatientRoom>();
+            if (calling != null && calling.IsCalling)
+            {
+                DrawCallBadge(rect, calling);
+            }
         }
 
         float barHeight = hintStyle.fontSize * 2.2f;
         GUI.Box(new Rect(0f, Screen.height - barHeight, Screen.width, barHeight), GUIContent.none);
-        GUI.Label(new Rect(0f, Screen.height - barHeight, Screen.width, barHeight), "Click a patient room to begin the examination", hintStyle);
+        string hint = AnyRoomCalling() ? "A room is calling the nurse. Click the blinking room" : "Click a patient room to begin the examination";
+        GUI.Label(new Rect(0f, Screen.height - barHeight, Screen.width, barHeight), hint, hintStyle);
 
         if (!string.IsNullOrEmpty(notice) && Time.unscaledTime < noticeUntil)
         {
@@ -210,6 +239,18 @@ public class HospitalRoomPicker : MonoBehaviour
             GUI.Box(new Rect(Screen.width * 0.25f, noticeRect.y, Screen.width * 0.5f, barHeight), GUIContent.none);
             GUI.Label(noticeRect, notice, hintStyle);
         }
+    }
+
+    void DrawCallBadge(Rect labelRect, PatientRoom room)
+    {
+        const string text = "NURSE CALL";
+        Vector2 size = labelStyle.CalcSize(new GUIContent(text));
+        float width = Mathf.Max(labelRect.width, size.x + 20f);
+        Rect badge = new Rect(labelRect.center.x - (width * 0.5f), labelRect.y - labelRect.height - 6f, width, labelRect.height);
+        GUI.color = Color.Lerp(new Color(0.45f, 0.08f, 0.08f, 1f), room.CallColor, room.CallPulse);
+        GUI.DrawTexture(badge, Texture2D.whiteTexture);
+        GUI.color = Color.white;
+        GUI.Label(badge, text, labelStyle);
     }
 
     void EnsureStyles()

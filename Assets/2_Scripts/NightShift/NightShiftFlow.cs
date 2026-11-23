@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -22,6 +23,9 @@ public class NightShiftFlow : MonoBehaviour
     [SerializeField] GameObject hospitalRoot;
 
     NightShiftProgress progress;
+    PatientRoom[] rooms = new PatientRoom[0];
+    PatientRoom[] callRooms = new PatientRoom[0];
+    bool[] announced = new bool[0];
     int current = -1;
     int lastRinging;
     bool callsShowing;
@@ -34,6 +38,7 @@ public class NightShiftFlow : MonoBehaviour
         if (controller == null) { controller = FindAnyObjectByType<PatientInterviewController>(FindObjectsInactive.Include); }
         if (handover == null) { handover = FindAnyObjectByType<HandoverFlow>(FindObjectsInactive.Include); }
         if (screen == null) { screen = FindAnyObjectByType<NightShiftScreenUI>(FindObjectsInactive.Include); }
+        rooms = FindObjectsByType<PatientRoom>(FindObjectsInactive.Include);
         BuildProgress();
     }
 
@@ -90,8 +95,16 @@ public class NightShiftFlow : MonoBehaviour
             return;
         }
 
-        progress.Tick(Time.unscaledDeltaTime);
+        // With nobody waiting the clock runs faster, so the player never sits through dead time before the next call
+        float delta = Time.unscaledDeltaTime;
+        if (shift != null && shift.idleSpeedUp > 1f && IsIdle())
+        {
+            delta *= shift.idleSpeedUp;
+        }
+
+        progress.Tick(delta);
         screen.SetClock(progress.Clock, progress.Elapsed01);
+        AnnounceCalls();
 
         // A call that has just started ringing needs the list to be rebuilt
         int ringing = progress.RingingCount;
@@ -121,6 +134,105 @@ public class NightShiftFlow : MonoBehaviour
         }
 
         progress = new NightShiftProgress(shift.startTime, shift.endTime, shift.lengthMinutes, times);
+
+        announced = new bool[shift.calls.Count];
+        callRooms = new PatientRoom[shift.calls.Count];
+        for (int i = 0; i < shift.calls.Count; i++)
+        {
+            callRooms[i] = FindRoom(shift.calls[i]);
+        }
+    }
+
+    // The call's own room if it names one, otherwise the room that holds the patient
+    PatientRoom FindRoom(NightCall call)
+    {
+        if (call == null)
+        {
+            return null;
+        }
+
+        for (int i = 0; i < rooms.Length; i++)
+        {
+            if (rooms[i] == null)
+            {
+                continue;
+            }
+
+            bool named = !string.IsNullOrWhiteSpace(call.room) && rooms[i].RoomName.IndexOf(call.room.Trim(), StringComparison.OrdinalIgnoreCase) >= 0;
+            bool holdsPatient = string.IsNullOrWhiteSpace(call.room) && call.patient != null && rooms[i].AssignedPatient == call.patient;
+            if (named || holdsPatient)
+            {
+                return rooms[i];
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(call.room))
+        {
+            Debug.LogWarning($"NightShiftFlow: no room matches \"{call.room}\" for the call at {call.time}.", this);
+        }
+
+        return null;
+    }
+
+    // True when the player is on the map, no call is waiting for them and there is still a call to come
+    bool IsIdle()
+    {
+        if (!callsShowing || progress.IsOver)
+        {
+            return false;
+        }
+
+        bool upcoming = false;
+        for (int i = 0; i < progress.CallCount; i++)
+        {
+            if (progress.IsDone(i))
+            {
+                continue;
+            }
+
+            if (progress.IsRinging(i))
+            {
+                return false;
+            }
+
+            upcoming = true;
+        }
+
+        return upcoming;
+    }
+
+    // Starts the room blinking for every call that has just begun to ring
+    void AnnounceCalls()
+    {
+        for (int i = 0; i < announced.Length; i++)
+        {
+            if (announced[i] || !progress.IsRinging(i) || progress.IsDone(i))
+            {
+                continue;
+            }
+
+            announced[i] = true;
+            if (callRooms[i] != null)
+            {
+                callRooms[i].StartCall(shift.calls[i].patient);
+            }
+        }
+    }
+
+    void StopRoomCall(int index)
+    {
+        if (index >= 0 && index < callRooms.Length && callRooms[index] != null)
+        {
+            callRooms[index].StopCall();
+        }
+    }
+
+    void StopAllRoomCalls()
+    {
+        for (int i = 0; i < callRooms.Length; i++)
+        {
+            StopRoomCall(i);
+        }
     }
 
     void StartCall(int index)
@@ -160,6 +272,7 @@ public class NightShiftFlow : MonoBehaviour
         }
 
         progress.Complete(index, score.Percent, score.Level);
+        StopRoomCall(index);
         summaryPending = progress.IsComplete;
     }
 
@@ -167,6 +280,9 @@ public class NightShiftFlow : MonoBehaviour
     void HandleInterviewStarted()
     {
         callsShowing = false;
+
+        // The nurse is in the room now, so it stops blinking
+        StopRoomCall(IndexOf(patient != null ? patient.Profile : null));
         if (screen != null)
         {
             screen.Hide();
@@ -182,10 +298,20 @@ public class NightShiftFlow : MonoBehaviour
         if (summaryPending || (progress != null && progress.IsOver))
         {
             summaryPending = false;
+            StopAllRoomCalls();
             ShowSummary();
         }
         else
         {
+            // A call the player left without handing over is still waiting, so its room blinks again
+            for (int i = 0; progress != null && i < announced.Length; i++)
+            {
+                if (announced[i] && progress.IsRinging(i) && !progress.IsDone(i))
+                {
+                    announced[i] = false;
+                }
+            }
+
             ShowCalls();
         }
     }
@@ -194,6 +320,7 @@ public class NightShiftFlow : MonoBehaviour
     void HandleTimeUp()
     {
         timeUpHandled = true;
+        StopAllRoomCalls();
         if (controller != null && controller.IsPlaying)
         {
             controller.EndInterview();
@@ -212,6 +339,8 @@ public class NightShiftFlow : MonoBehaviour
         }
 
         progress.Reset();
+        StopAllRoomCalls();
+        announced = new bool[announced.Length];
         lastRinging = 0;
         summaryPending = false;
         timeUpHandled = false;
