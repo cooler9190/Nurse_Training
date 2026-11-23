@@ -10,10 +10,11 @@ using UnityEngine;
 /// question/answer exchange, and the ABCDE examination steps.
 /// <para>
 /// How it works: the UI (<see cref="PatientInterviewUI"/>) only reports clicks; this controller
-/// decides what happens. When the player picks a question, the player's line is shown briefly,
-/// then the patient's reply is typed out letter by letter with an FMOD voice blip every few characters.
-/// Clicking the dialogue panel skips ahead. After the reply, the question's cue (if any) is
-/// raised through <see cref="OnCueRecognized"/> and its follow-up questions are unlocked.
+/// decides what happens. When the player picks a question, the player's line is typed and held briefly,
+/// then the patient's reply and any follow-up lines are played through <see cref="PlayLines"/>: each line is
+/// typed out letter by letter, voiced by its speaker, and waits for a click before the next one.
+/// Clicking the dialogue panel while a line is typing shows it in full. After the reply, the question's cue
+/// (if any) is raised through <see cref="OnCueRecognized"/> and its follow-up questions are unlocked.
 /// Only one exchange can run at a time; input is disabled while <c>isBusy</c> is true.
 /// </para>
 /// <para>
@@ -32,7 +33,9 @@ public class PatientInterviewController : MonoBehaviour
     [SerializeField] string playerDisplayName = "You";
     [Tooltip("Scales every patient's text speed. 1 uses the patient's own speed, 2 types twice as slowly, 0.5 twice as fast.")]
     [SerializeField, Range(0.25f, 4f)] float textSpeedMultiplier = 1f;
-    [Tooltip("Seconds the player's question stays on screen before the patient starts answering.")]
+    [Tooltip("Seconds between each typed character of the player's lines. Lower is faster.")]
+    [SerializeField, Range(0.005f, 0.1f)] float playerTextSpeed = 0.015f;
+    [Tooltip("Seconds the player's chosen line stays on screen before the next line starts.")]
     [SerializeField] float playerLineHold = 0.35f;
 
     SO_Patient interview;
@@ -137,11 +140,20 @@ public class PatientInterviewController : MonoBehaviour
 
         // A previous interview may have ended mid-line, leaving the questions disabled
         interviewUI.SetQuestionsEnabled(true);
+        interviewUI.SetContinueHintVisible(false);
         interviewUI.SetVisible(true);
-        interviewUI.SetSpeakerName(interview.patientDisplayName);
-        interviewUI.SetDialogueText(progress.HasProgress
-            ? $"Welcome back. Continue your conversation with {interview.patientDisplayName}."
-            : $"Select a question to ask {interview.patientDisplayName}.");
+        bool showOpening = !progress.HasProgress && !string.IsNullOrWhiteSpace(interview.openingText);
+        interviewUI.SetSpeakerName(showOpening ? string.Empty : interview.patientDisplayName);
+        if (progress.HasProgress)
+        {
+            interviewUI.SetDialogueText($"Welcome back. Continue your conversation with {interview.patientDisplayName}.");
+        }
+        else
+        {
+            interviewUI.SetDialogueText(showOpening
+                ? interview.openingText.Trim()
+                : $"Select a question to ask {interview.patientDisplayName}.");
+        }
         RefreshQuestions();
         for (int i = 0; i < examined.Length; i++)
         {
@@ -187,6 +199,7 @@ public class PatientInterviewController : MonoBehaviour
 
         if (interviewUI != null)
         {
+            interviewUI.SetContinueHintVisible(false);
             interviewUI.SetVisible(false);
         }
 
@@ -243,8 +256,8 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays one question/answer: shows the player's question for <c>playerLineHold</c> seconds,
-    /// types out the patient's reply with voice, then awards the cue and unlocks follow-ups.
+    /// Plays one question/answer: the player's question, the patient's reply and any follow-up lines,
+    /// then awards the cue and unlocks follow-up questions.
     /// </summary>
     IEnumerator PlayExchange(InterviewQuestion question)
     {
@@ -253,19 +266,17 @@ public class PatientInterviewController : MonoBehaviour
         interviewUI.SetQuestionsEnabled(false);
         RefreshQuestions();
 
-        interviewUI.SetSpeakerName(playerDisplayName);
-        interviewUI.SetDialogueText(question.questionText);
-
-        float hold = playerLineHold;
-        while (hold > 0f && !skipRequested)
+        List<DialogueLine> lines = new List<DialogueLine>
         {
-            hold -= Time.unscaledDeltaTime;
-            yield return null;
+            new DialogueLine(DialogueSpeaker.Nurse, question.questionText),
+            new DialogueLine(DialogueSpeaker.Patient, question.patientResponse)
+        };
+        if (question.followUpLines != null)
+        {
+            lines.AddRange(question.followUpLines);
         }
 
-        skipRequested = false;
-        interviewUI.SetSpeakerName(interview.patientDisplayName);
-        yield return TypePatientLine(question.patientResponse);
+        yield return PlayLinesRoutine(lines);
 
         AwardCueIfNeeded(question);
         UnlockFollowUps(question);
@@ -306,7 +317,7 @@ public class PatientInterviewController : MonoBehaviour
 
         string letterName = letter.ToString();
         interviewUI.SetSpeakerName($"{letterName[0]} - {letterName}");
-        yield return TypePatientLine(text, false);
+        yield return TypeLine(text, Voice.Silent(interview.textSpeed));
 
         if (finding != null && finding.awardsCue)
         {
@@ -321,23 +332,23 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Types a patient line with this patient's text speed and voice, then calls <paramref name="onComplete"/>.
-    /// <paramref name="keptText"/> stays on screen ahead of the typed line (for example pros and cons).
-    /// Clicking the dialogue box skips to the end, the same way interview answers do.
+    /// Plays <paramref name="lines"/> in order (see <see cref="PlayLinesRoutine"/>), then calls
+    /// <paramref name="onComplete"/>. Input is blocked until the last line has been typed.
     /// </summary>
-    public void PlayPatientLine(string speaker, string line, string keptText, Action onComplete)
+    public void PlayLines(IReadOnlyList<DialogueLine> lines, Action onComplete)
     {
         if (spokenLine != null)
         {
             StopCoroutine(spokenLine);
             spokenLine = null;
             isBusy = false;
+            interviewUI?.SetContinueHintVisible(false);
         }
 
-        spokenLine = StartCoroutine(PlayPatientLineRoutine(speaker, line, keptText, onComplete));
+        spokenLine = StartCoroutine(PlayLinesThenComplete(lines, onComplete));
     }
 
-    IEnumerator PlayPatientLineRoutine(string speaker, string line, string keptText, Action onComplete)
+    IEnumerator PlayLinesThenComplete(IReadOnlyList<DialogueLine> lines, Action onComplete)
     {
         if (!isPlaying || interview == null || interviewUI == null)
         {
@@ -349,23 +360,7 @@ public class PatientInterviewController : MonoBehaviour
         isBusy = true;
         skipRequested = false;
         interviewUI.SetQuestionsEnabled(false);
-
-        if (!string.IsNullOrEmpty(keptText))
-        {
-            interviewUI.SetSpeakerName("You");
-            interviewUI.SetDialogueText(keptText.TrimEnd());
-            float hold = playerLineHold;
-            while (hold > 0f && !skipRequested)
-            {
-                hold -= Time.unscaledDeltaTime;
-                yield return null;
-            }
-
-            skipRequested = false;
-        }
-
-        interviewUI.SetSpeakerName(speaker);
-        yield return TypePatientLine(line, true, keptText);
+        yield return PlayLinesRoutine(lines);
         isBusy = false;
         interviewUI.SetQuestionsEnabled(true);
         spokenLine = null;
@@ -373,40 +368,132 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Typewriter effect: reveals <paramref name="line"/> one character every <c>SO_Patient.textSpeed</c>
+    /// Types each line with its speaker's name and voice. A nurse line at the start is the choice the
+    /// player just clicked, so it moves on by itself after <c>playerLineHold</c>; every other line waits
+    /// for a click on the dialogue box before the next one. The last line stays on screen.
+    /// </summary>
+    IEnumerator PlayLinesRoutine(IReadOnlyList<DialogueLine> lines)
+    {
+        if (lines == null)
+        {
+            yield break;
+        }
+
+        bool waitBeforeNext = false;
+        bool first = true;
+        for (int i = 0; i < lines.Count; i++)
+        {
+            DialogueLine line = lines[i];
+            if (line == null || !line.HasText)
+            {
+                continue;
+            }
+
+            if (waitBeforeNext)
+            {
+                yield return WaitForClick();
+            }
+
+            interviewUI.SetSpeakerName(SpeakerName(line));
+            yield return TypeLine(line.text.Trim(), VoiceFor(line));
+
+            bool chosenLine = first && line.speaker == DialogueSpeaker.Nurse;
+            if (chosenLine)
+            {
+                yield return Hold(playerLineHold);
+            }
+
+            waitBeforeNext = !chosenLine;
+            first = false;
+        }
+    }
+
+    IEnumerator WaitForClick()
+    {
+        skipRequested = false;
+        interviewUI.SetContinueHintVisible(true);
+        while (!skipRequested)
+        {
+            yield return null;
+        }
+
+        skipRequested = false;
+        interviewUI.SetContinueHintVisible(false);
+    }
+
+    IEnumerator Hold(float seconds)
+    {
+        while (seconds > 0f && !skipRequested)
+        {
+            seconds -= Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        skipRequested = false;
+    }
+
+    string SpeakerName(DialogueLine line)
+    {
+        switch (line.speaker)
+        {
+            case DialogueSpeaker.Nurse:
+                return playerDisplayName;
+            case DialogueSpeaker.Patient:
+                return interview.patientDisplayName;
+            case DialogueSpeaker.Other:
+                return line.otherSpeaker != null ? line.otherSpeaker.displayName : string.Empty;
+            default:
+                return string.Empty;
+        }
+    }
+
+    Voice VoiceFor(DialogueLine line)
+    {
+        switch (line.speaker)
+        {
+            case DialogueSpeaker.Nurse:
+                return Voice.Silent(playerTextSpeed);
+            case DialogueSpeaker.Patient:
+                return new Voice(interview.patientDialogueEvent, interview.dialoguePitch, interview.textSpeed, interview.charactersPerVoiceBlip, true);
+            case DialogueSpeaker.Other when line.otherSpeaker != null:
+                SO_Speaker speaker = line.otherSpeaker;
+                return new Voice(speaker.dialogueEvent, speaker.dialoguePitch, speaker.textSpeed, speaker.charactersPerVoiceBlip, false);
+            default:
+                return Voice.Silent(interview.textSpeed);
+        }
+    }
+
+    /// <summary>
+    /// Typewriter effect: reveals <paramref name="line"/> one character every <see cref="Voice.TextSpeed"/>
     /// seconds, scaled by <c>textSpeedMultiplier</c>.
     /// Uses unscaled/realtime timing so it still works when the game is paused (timeScale 0).
-    /// A skip request shows the full line immediately. When <paramref name="playVoice"/> is true, a voice
-    /// blip plays every <c>SO_Patient.charactersPerVoiceBlip</c> characters, so the sound follows the text speed.
-    /// <paramref name="keptText"/> is shown in full before the typed line and is not voiced.
+    /// A skip request shows the full line immediately. A voiced line plays a blip every
+    /// <see cref="Voice.BlipInterval"/> characters, so the sound follows the text speed.
     /// </summary>
-    IEnumerator TypePatientLine(string line, bool playVoice = true, string keptText = null)
+    IEnumerator TypeLine(string line, Voice voice)
     {
         string text = line ?? string.Empty;
-        string head = string.IsNullOrEmpty(keptText) ? string.Empty : keptText.TrimEnd() + "\n\n";
-        string full = head + text;
-        interviewUI.SetDialogueText(head);
-        float characterDelay = interview.textSpeed * textSpeedMultiplier;
-        int blipInterval = Mathf.Max(1, interview.charactersPerVoiceBlip);
+        interviewUI.SetDialogueText(string.Empty);
+        float characterDelay = voice.TextSpeed * textSpeedMultiplier;
+        int blipInterval = Mathf.Max(1, voice.BlipInterval);
 
         for (int i = 0; i < text.Length; i++)
         {
             if (skipRequested)
             {
-                interviewUI.SetDialogueText(full);
                 break;
             }
 
-            interviewUI.SetDialogueText(head + text.Substring(0, i + 1));
+            interviewUI.SetDialogueText(text.Substring(0, i + 1));
             yield return new WaitForSecondsRealtime(characterDelay);
 
-            if (playVoice && i % blipInterval == 0)
+            if (voice.Voiced && i % blipInterval == 0)
             {
-                PlayVoiceBlip();
+                PlayVoiceBlip(voice);
             }
         }
 
-        interviewUI.SetDialogueText(full);
+        interviewUI.SetDialogueText(text);
         skipRequested = false;
     }
 
@@ -536,14 +623,15 @@ public class PatientInterviewController : MonoBehaviour
     }
 
     /// <summary>
-    /// Plays one short, fire-and-forget instance of the patient's dialogue event. FMOD frees it once
-    /// it finishes. A missing or invalid event is reported only once per interview so the console isn't flooded.
+    /// Plays one short, fire-and-forget instance of the speaker's dialogue event. FMOD frees it once
+    /// it finishes. A missing patient voice or an invalid event is reported only once per interview so the
+    /// console isn't flooded. Other speakers without an event stay silent.
     /// </summary>
-    void PlayVoiceBlip()
+    void PlayVoiceBlip(Voice voice)
     {
-        if (interview == null || interview.patientDialogueEvent.IsNull)
+        if (voice.Event.IsNull)
         {
-            if (!warnedMissingVoice)
+            if (voice.WarnIfMissing && !warnedMissingVoice)
             {
                 warnedMissingVoice = true;
                 string assetName = interview != null ? interview.name : "null";
@@ -553,20 +641,56 @@ public class PatientInterviewController : MonoBehaviour
             return;
         }
 
-        EventInstance blip = RuntimeManager.CreateInstance(interview.patientDialogueEvent);
+        EventInstance blip = RuntimeManager.CreateInstance(voice.Event);
         if (!blip.isValid())
         {
             if (!warnedMissingVoice)
             {
                 warnedMissingVoice = true;
-                Debug.LogError("PatientInterviewController: FMOD patientDialogueEvent is invalid. Check the assigned event.", this);
+                Debug.LogError("PatientInterviewController: FMOD dialogue event is invalid. Check the assigned event.", this);
             }
 
             return;
         }
 
-        blip.setPitch(interview.dialoguePitch);
+        blip.setPitch(voice.Pitch);
         blip.start();
         blip.release();
+    }
+
+    /// <summary>How one line is typed and voiced, taken from the patient, an <see cref="SO_Speaker"/>, or nobody.</summary>
+    readonly struct Voice
+    {
+        public readonly EventReference Event;
+        public readonly float Pitch;
+        public readonly float TextSpeed;
+        public readonly int BlipInterval;
+        public readonly bool Voiced;
+        public readonly bool WarnIfMissing;
+
+        public Voice(EventReference dialogueEvent, float pitch, float textSpeed, int blipInterval, bool warnIfMissing)
+        {
+            Event = dialogueEvent;
+            Pitch = pitch;
+            TextSpeed = textSpeed;
+            BlipInterval = blipInterval;
+            Voiced = true;
+            WarnIfMissing = warnIfMissing;
+        }
+
+        Voice(float textSpeed)
+        {
+            Event = default;
+            Pitch = 1f;
+            TextSpeed = textSpeed;
+            BlipInterval = 1;
+            Voiced = false;
+            WarnIfMissing = false;
+        }
+
+        public static Voice Silent(float textSpeed)
+        {
+            return new Voice(textSpeed);
+        }
     }
 }

@@ -51,6 +51,7 @@ public class PatientInterviewUI : MonoBehaviour
     Sprite portraitSprite;
     Label speakerName;
     Label dialogueText;
+    Label continueHint;
     Label frustrationReadout;
     Label frustrationMood;
     VisualElement frustrationMeter;
@@ -368,6 +369,15 @@ public class PatientInterviewUI : MonoBehaviour
         }
     }
 
+    /// <summary>Shows "Click to continue" while a conversation waits for the player before its next line.</summary>
+    public void SetContinueHintVisible(bool visible)
+    {
+        if (continueHint != null)
+        {
+            continueHint.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
+        }
+    }
+
     /// <summary>
     /// Enables or disables the question list, shared-decision choices and the ABCDE bar together.
     /// Used to block input while a line is playing. The value is remembered and re-applied when
@@ -583,6 +593,7 @@ public class PatientInterviewUI : MonoBehaviour
         portrait = bindRoot.Q<VisualElement>("portrait");
         speakerName = bindRoot.Q<Label>("speaker-name");
         dialogueText = bindRoot.Q<Label>("dialogue-text");
+        continueHint = bindRoot.Q<Label>("continue-hint");
         frustrationReadout = bindRoot.Q<Label>("frustration-readout");
         frustrationMood = bindRoot.Q<Label>("frustration-mood");
         frustrationMeter = bindRoot.Q<VisualElement>("frustration-meter");
@@ -690,6 +701,7 @@ public class PatientInterviewUI : MonoBehaviour
         portrait = null;
         speakerName = null;
         dialogueText = null;
+        continueHint = null;
         questionList = null;
         questionScroll = null;
         choiceList = null;

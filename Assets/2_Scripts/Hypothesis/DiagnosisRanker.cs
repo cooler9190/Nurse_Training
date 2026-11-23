@@ -6,11 +6,12 @@ using System.Linq;
 /// </summary>
 public readonly struct RankedDiagnosis
 {
-    public RankedDiagnosis(Diagnosis diagnosis, int priority, IReadOnlyList<string> supportingCueTitles)
+    public RankedDiagnosis(Diagnosis diagnosis, int priority, IReadOnlyList<string> supportingCueTitles, int extraCueCount)
     {
         Diagnosis = diagnosis;
         Priority = priority;
         SupportingCueTitles = supportingCueTitles;
+        ExtraCueCount = extraCueCount;
     }
 
     public Diagnosis Diagnosis { get; }
@@ -18,15 +19,16 @@ public readonly struct RankedDiagnosis
     public int Priority { get; }
     /// <summary>Titles of the ranked cues that support this diagnosis, in ranking order.</summary>
     public IReadOnlyList<string> SupportingCueTitles { get; }
+    /// <summary>Supporting cues ranked beyond the number the diagnosis needed to unlock.</summary>
+    public int ExtraCueCount { get; }
 }
 
 /// <summary>
 /// Turns the player's cue ranking into a prioritised list of diagnoses. Contains no UI code.
 /// <para>
-/// A diagnosis is included when at least one of its supporting cues was ranked, or all of them
-/// when <see cref="Diagnosis.requiresAllSupportingCues"/> is on. Diagnoses are
-/// ordered by their best (highest) ranked supporting cue, then by how many of their supporting
-/// cues were ranked, then by the order they were authored in the patient asset.
+/// A diagnosis is included once <see cref="Diagnosis.RequiredCueCount"/> of its supporting cues were
+/// ranked. Diagnoses are ordered by their best (highest) ranked supporting cue, then by how many of their
+/// supporting cues were ranked, then by the order they were authored in the patient asset.
 /// </para>
 /// </summary>
 public static class DiagnosisRanker
@@ -62,13 +64,7 @@ public static class DiagnosisRanker
                 .OrderBy(rank => rank)
                 .ToList();
 
-            if (ranks.Count == 0)
-            {
-                continue;
-            }
-
-            if (diagnosis.requiresAllSupportingCues &&
-                ranks.Count < diagnosis.supportingCueIds.Where(id => !string.IsNullOrEmpty(id)).Distinct().Count())
+            if (ranks.Count == 0 || ranks.Count < diagnosis.RequiredCueCount)
             {
                 continue;
             }
@@ -84,7 +80,8 @@ public static class DiagnosisRanker
         foreach (var candidate in ordered)
         {
             List<string> titles = candidate.ranks.Select(rank => rankedCues[rank].Title).ToList();
-            results.Add(new RankedDiagnosis(candidate.diagnosis, results.Count + 1, titles));
+            int extra = candidate.ranks.Count - candidate.diagnosis.RequiredCueCount;
+            results.Add(new RankedDiagnosis(candidate.diagnosis, results.Count + 1, titles, extra));
         }
 
         return results;

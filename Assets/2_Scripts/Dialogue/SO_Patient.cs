@@ -16,7 +16,8 @@ using UnityEngine;
 /// The correct answer used at hand over is also stored here: <see cref="solutionDiagnosisIds"/>,
 /// <see cref="correctCueOrder"/>, <see cref="prioritiesSummary"/> and each diagnosis's
 /// <see cref="Diagnosis.priorityReason"/> (see <c>PriorityEvaluator</c>). Each diagnosis can also
-/// carry a <see cref="Diagnosis.sharedDecision"/> conversation for sharing it with the patient.
+/// carry a <see cref="Diagnosis.sharedDecision"/> options and decision talk for sharing it with the
+/// patient; the team talk, closing and walkout lines for the whole case live in <see cref="sharedDecision"/>.
 /// </para>
 /// </summary>
 [CreateAssetMenu(fileName = "SO_Patient", menuName = "Scriptable Objects/Patient")]
@@ -39,6 +40,9 @@ public class SO_Patient : ScriptableObject
     public int charactersPerVoiceBlip = 3;
     /// <summary>Background information shown in the patient folder (age, allergies, notes...).</summary>
     public PatientChart chart = new PatientChart();
+    [TextArea(1, 3)]
+    [Tooltip("Shown in the dialogue box when the interview first opens, e.g. what the nurse sees on entering. Empty shows \"Select a question to ask...\".")]
+    public string openingText;
     /// <summary>All questions the player can ask, including follow-ups that start locked.</summary>
     public List<InterviewQuestion> questions = new List<InterviewQuestion>();
     /// <summary>Clickable regions on the portrait that reveal visual cues.</summary>
@@ -54,6 +58,8 @@ public class SO_Patient : ScriptableObject
     [TextArea(2, 6)]
     [Tooltip("A short explanation of the whole ordering. Shown at hand over.")]
     public string prioritiesSummary;
+    [Tooltip("Team talk, closing and walkout lines for shared decision making. Each diagnosis holds its own options and decision talk.")]
+    public PatientSharedDecision sharedDecision = new PatientSharedDecision();
 
     /// <summary>True when a correct order has been authored, so the patient can be handed over.</summary>
     public bool HasPriorities =>
@@ -194,6 +200,55 @@ public class SO_Patient : ScriptableObject
         WarnDuplicateIds(correctCueOrder, "correct cue order", cue => cue != null ? cue.id : null);
         WarnUnknownSolutionIds();
         WarnUnknownCueOrderIds();
+        WarnRecommendedTreatments();
+        WarnRequiredCueCounts();
+    }
+
+    void WarnRequiredCueCounts()
+    {
+        if (diagnoses == null)
+        {
+            return;
+        }
+
+        foreach (Diagnosis diagnosis in diagnoses)
+        {
+            if (diagnosis != null && diagnosis.requiredCueCount > diagnosis.SupportingCueCount)
+            {
+                Debug.LogWarning($"{name}: diagnosis '{diagnosis.id}' needs {diagnosis.requiredCueCount} cues but only lists {diagnosis.SupportingCueCount} supporting cues, so all of them are required.", this);
+            }
+        }
+    }
+
+    void WarnRecommendedTreatments()
+    {
+        if (diagnoses == null)
+        {
+            return;
+        }
+
+        foreach (Diagnosis diagnosis in diagnoses)
+        {
+            SharedDecisionTalk talk = diagnosis != null ? diagnosis.sharedDecision : null;
+            if (talk == null || talk.treatments == null || talk.treatments.Count == 0)
+            {
+                continue;
+            }
+
+            int recommended = 0;
+            foreach (TreatmentOption treatment in talk.treatments)
+            {
+                if (treatment != null && treatment.recommended)
+                {
+                    recommended++;
+                }
+            }
+
+            if (recommended != 1)
+            {
+                Debug.LogWarning($"{name}: diagnosis '{diagnosis.id}' should have exactly one recommended treatment, but has {recommended}.", this);
+            }
+        }
     }
 
     void WarnUnknownCueOrderIds()
@@ -311,6 +366,8 @@ public class InterviewQuestion
     public string questionText;
     [TextArea(2, 6)]
     public string patientResponse;
+    [Tooltip("More lines played after the patient's response, before the cue is awarded. Each waits for a click.")]
+    public List<DialogueLine> followUpLines = new List<DialogueLine>();
     /// <summary>If true the question is available from the start; otherwise it must be unlocked.</summary>
     public bool startsUnlocked = true;
     /// <summary>Ids of follow-up questions that become available after this one is answered.</summary>
@@ -406,10 +463,10 @@ public class VisualHotspot
 }
 
 /// <summary>
-/// A possible diagnosis for this patient. It shows up on the hypothesis screen when at least one
-/// of its <see cref="supportingCueIds"/> has been ranked by the player (or all of them, when
-/// <see cref="requiresAllSupportingCues"/> is on); its priority follows from how high those cues
-/// were ranked (see <c>DiagnosisRanker</c>).
+/// A possible diagnosis for this patient. It shows up on the hypothesis screen once
+/// <see cref="requiredCueCount"/> of its <see cref="supportingCueIds"/> have been ranked by the player;
+/// its priority follows from how high those cues were ranked (see <c>DiagnosisRanker</c>). Every supporting
+/// cue ranked beyond that number adds a small bonus at hand over (see <c>ScoreCalculator</c>).
 /// </summary>
 [Serializable]
 public class Diagnosis
@@ -422,13 +479,40 @@ public class Diagnosis
     public string treatment;
     /// <summary>Cue ids that point towards this diagnosis.</summary>
     public List<string> supportingCueIds = new List<string>();
-    [Tooltip("If on, the diagnosis only unlocks once every supporting cue has been found and ranked.")]
-    public bool requiresAllSupportingCues;
+    [Tooltip("How many of the supporting cues must be found and ranked before this diagnosis unlocks. Capped at the number of supporting cues.")]
+    [Min(1)]
+    public int requiredCueCount = 1;
     [TextArea(1, 4)]
     [Tooltip("Why this diagnosis sits where it does in the solution order. Shown at hand over.")]
     public string priorityReason;
-    [Tooltip("Team talk, option talk and decision talk played when this diagnosis is shared with the patient.")]
+    [Tooltip("Option talk and decision talk played when this diagnosis card is dropped on the patient.")]
     public SharedDecisionTalk sharedDecision = new SharedDecisionTalk();
+
+    /// <summary>The distinct, non-empty supporting cue ids.</summary>
+    public int SupportingCueCount
+    {
+        get
+        {
+            if (supportingCueIds == null)
+            {
+                return 0;
+            }
+
+            HashSet<string> ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string cueId in supportingCueIds)
+            {
+                if (!string.IsNullOrWhiteSpace(cueId))
+                {
+                    ids.Add(cueId);
+                }
+            }
+
+            return ids.Count;
+        }
+    }
+
+    /// <summary>The number of ranked supporting cues needed to unlock, between 1 and the number of supporting cues.</summary>
+    public int RequiredCueCount => Math.Max(1, Math.Min(requiredCueCount, SupportingCueCount));
 }
 
 /// <summary>One cue in the patient's correct cue order, with the reason it sits where it does.</summary>

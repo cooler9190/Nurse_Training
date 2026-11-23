@@ -134,7 +134,8 @@ public class HandoverFlow : MonoBehaviour
         }
 
         HandoverReport report = PriorityEvaluator.Evaluate(patient.Profile, patient.RecognizedCues, hypothesisScreen.RankedCueIds);
-        ScoreBreakdown score = ScoreCalculator.Calculate(report, UnsharedDiagnoses(report), examinationFailed);
+        SortDecisions(report, out List<string> unshared, out List<string> poorDecisions);
+        ScoreBreakdown score = ScoreCalculator.Calculate(report, unshared, poorDecisions, examinationFailed);
         handoverOpen = true;
         handoverScreen.Show(report, score);
         OnHandedOver?.Invoke(patient.Profile, score);
@@ -162,13 +163,17 @@ public class HandoverFlow : MonoBehaviour
         return patient != null && patient.Profile != null && patient.Profile.HasPriorities;
     }
 
-    /// <summary>Titles of diagnoses on the player's list that have a talk and were not shared.</summary>
-    List<string> UnsharedDiagnoses(HandoverReport report)
+    /// <summary>
+    /// Titles of diagnoses on the player's list that have a talk, split into those never decided with the
+    /// patient and those decided without the patient agreeing to the recommended treatment.
+    /// </summary>
+    void SortDecisions(HandoverReport report, out List<string> unshared, out List<string> poorDecisions)
     {
-        List<string> titles = new List<string>();
+        unshared = new List<string>();
+        poorDecisions = new List<string>();
         if (hypothesisScreen == null || report.PlayerDiagnoses == null)
         {
-            return titles;
+            return;
         }
 
         foreach (RankedDiagnosis ranked in report.PlayerDiagnoses)
@@ -184,9 +189,15 @@ public class HandoverFlow : MonoBehaviour
                 continue;
             }
 
-            titles.Add(string.IsNullOrEmpty(diagnosis.title) ? diagnosis.id : diagnosis.title);
+            string title = string.IsNullOrEmpty(diagnosis.title) ? diagnosis.id : diagnosis.title;
+            if (patient.IsDiagnosisDecided(diagnosis.id))
+            {
+                poorDecisions.Add(title);
+            }
+            else
+            {
+                unshared.Add(title);
+            }
         }
-
-        return titles;
     }
 }

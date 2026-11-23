@@ -30,6 +30,7 @@
                 <ui:Label name="speaker-name" text="Patient" class="speaker-name" style="left: 42px; color: rgb(255, 255, 255);"/>
             </ui:VisualElement>
             <ui:Label name="dialogue-text" text="" class="dialogue-text" style="top: -38px;"/>
+            <ui:Label name="continue-hint" text="Click to continue" picking-mode="Ignore" class="continue-hint" style="display: none;"/>
         </ui:VisualElement>
         <ui:VisualElement name="abcde-bar" class="abcde-bar" style="position: absolute; right: 115px; bottom: 130px;">
             <ui:Button name="abcde-0" text="A" class="abcde-button"/>

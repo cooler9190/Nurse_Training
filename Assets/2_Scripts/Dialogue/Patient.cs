@@ -17,8 +17,10 @@ using UnityEngine.Serialization;
 /// </para>
 /// <para>
 /// Prioritise hypotheses opens <see cref="HypothesisScreenUI"/>. After Diagnose, the diagnosis
-/// cards are shown in the patient file. Shared decision making moves that hand onto the interview
-/// and plays each diagnosis through <see cref="SharedDecisionSession"/>.
+/// cards are shown in the patient file. Shared decision making moves that hand onto the interview and
+/// starts the team talk; after it, each diagnosis card dropped on the patient plays its options and
+/// decision talk through <see cref="SharedDecisionSession"/>. Once every card with a talk is decided,
+/// the closing lines play.
 /// </para>
 /// </summary>
 public class Patient : MonoBehaviour
@@ -38,16 +40,23 @@ public class Patient : MonoBehaviour
     readonly List<RecognizedCue> recognizedCues = new List<RecognizedCue>();
     readonly HashSet<string> recognizedIds = new HashSet<string>();
     readonly SharedDecisionSession session = new SharedDecisionSession();
+    readonly List<Diagnosis> diagnosedHand = new List<Diagnosis>();
     PatientProgress progress;
 
     public SO_Patient Profile => profile;
     /// <summary>Cues found so far, in the order they were discovered.</summary>
     public IReadOnlyList<RecognizedCue> RecognizedCues => recognizedCues;
 
-    /// <summary>True when this diagnosis was discussed in full and decided with the patient.</summary>
+    /// <summary>True when the patient agreed to the recommended treatment for this diagnosis.</summary>
     public bool IsDiagnosisShared(string diagnosisId)
     {
         return session.IsShared(diagnosisId);
+    }
+
+    /// <summary>True once this diagnosis has been through its decision talk, however it ended.</summary>
+    public bool IsDiagnosisDecided(string diagnosisId)
+    {
+        return session.IsDecided(diagnosisId);
     }
 
     /// <summary>Falls back to components on the same GameObject if references weren't assigned.</summary>
@@ -98,6 +107,7 @@ public class Patient : MonoBehaviour
         recognizedCues.Clear();
         recognizedIds.Clear();
         session.Reset();
+        diagnosedHand.Clear();
 
         // Bring back what the player already found with this patient
         progress = PatientProgressStore.Get(profile);
@@ -204,12 +214,25 @@ public class Patient : MonoBehaviour
 
     void HandleDiagnosed(IReadOnlyList<RankedDiagnosis> results)
     {
-        if (!session.HasLeft)
+        // An unanswered team talk stays open, otherwise the cards could never be discussed
+        if (!session.HasLeft && !session.IsInTeamTalk)
         {
             session.CancelTalk();
             if (interviewUI != null)
             {
                 interviewUI.HideShareChoices();
+            }
+        }
+
+        diagnosedHand.Clear();
+        if (results != null)
+        {
+            for (int i = 0; i < results.Count; i++)
+            {
+                if (results[i].Diagnosis != null)
+                {
+                    diagnosedHand.Add(results[i].Diagnosis);
+                }
             }
         }
 
@@ -221,10 +244,13 @@ public class Patient : MonoBehaviour
 
     void BeginSharedDecision()
     {
-        if (interviewUI != null && interviewUI.BeginSharedDecision())
+        if (interviewUI == null || InterviewIsBusy || !interviewUI.BeginSharedDecision())
         {
-            interviewUI.SetFrustration(session.Frustration, true);
+            return;
         }
+
+        interviewUI.SetFrustration(session.Frustration, true);
+        ApplyPrompt(session.BeginTeamTalk(profile != null ? profile.sharedDecision : null, PatientName));
     }
 
     void HandleDiagnosisDropped(Diagnosis diagnosis)
@@ -234,7 +260,7 @@ public class Patient : MonoBehaviour
             return;
         }
 
-        ApplyPrompt(session.Begin(diagnosis, profile != null ? profile.patientDisplayName : null));
+        ApplyPrompt(session.Begin(diagnosis, PatientName));
     }
 
     void HandleShareChoice(int index)
@@ -247,6 +273,7 @@ public class Patient : MonoBehaviour
         ApplyPrompt(session.Choose(index));
     }
 
+    /// <summary>Plays the prompt's lines, adding the closing lines after the last decision, then shows its choices.</summary>
     void ApplyPrompt(SharePrompt prompt)
     {
         if (prompt == null || interviewUI == null)
@@ -254,34 +281,54 @@ public class Patient : MonoBehaviour
             return;
         }
 
+        if (prompt.Finished && AllTalksDecided())
+        {
+            prompt.Lines.AddRange(session.Closing());
+        }
+
         interviewUI.SetFrustration(prompt.Frustration, true);
         interviewUI.ClearShareChoices();
-        if (string.IsNullOrEmpty(prompt.PatientLine))
+        if (prompt.Lines.Count == 0)
         {
-            if (prompt.Dialogue != null)
-            {
-                interviewUI.SetSpeakerName(string.IsNullOrEmpty(prompt.Speaker) ? "You" : prompt.Speaker);
-                interviewUI.SetDialogueText(prompt.Dialogue);
-            }
-
             FinishPrompt(prompt);
             return;
         }
 
         interviewUI.SetShareLinePlaying(true);
-        string speaker = string.IsNullOrEmpty(prompt.Speaker) ? "Patient" : prompt.Speaker;
         if (interviewController != null)
         {
-            interviewController.PlayPatientLine(speaker, prompt.PatientLine, prompt.Dialogue, () => FinishPrompt(prompt));
+            interviewController.PlayLines(prompt.Lines, () => FinishPrompt(prompt));
             return;
         }
 
-        interviewUI.SetSpeakerName(speaker);
-        interviewUI.SetDialogueText(string.IsNullOrEmpty(prompt.Dialogue)
-            ? prompt.PatientLine
-            : prompt.Dialogue + "\n\n" + prompt.PatientLine);
+        DialogueLine last = prompt.Lines[prompt.Lines.Count - 1];
+        interviewUI.SetDialogueText(last != null ? last.text : string.Empty);
         FinishPrompt(prompt);
     }
+
+    /// <summary>True when every diagnosis on the hand that has a talk has been decided.</summary>
+    bool AllTalksDecided()
+    {
+        bool any = false;
+        for (int i = 0; i < diagnosedHand.Count; i++)
+        {
+            Diagnosis diagnosis = diagnosedHand[i];
+            if (diagnosis.sharedDecision == null || !diagnosis.sharedDecision.HasScript)
+            {
+                continue;
+            }
+
+            any = true;
+            if (!session.IsDecided(diagnosis.id))
+            {
+                return false;
+            }
+        }
+
+        return any;
+    }
+
+    string PatientName => profile != null ? profile.patientDisplayName : null;
 
     void FinishPrompt(SharePrompt prompt)
     {
@@ -291,6 +338,7 @@ public class Patient : MonoBehaviour
         }
 
         interviewUI.SetShareLinePlaying(false);
+        interviewUI.SetContinueHintVisible(false);
         interviewUI.ShowSharePrompt(null, null, prompt.Choices);
         if (prompt.Finished)
         {

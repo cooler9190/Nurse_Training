@@ -29,7 +29,9 @@ public class ScoreBreakdown
     public List<StepScore> Steps = new List<StepScore>();
     public int Percent;
     public ScoreLevel Level;
-    /// <summary>Set when the score was halved because a diagnosis and its treatment were not shared.</summary>
+    /// <summary>Set when extra supporting cues raised the score.</summary>
+    public string Bonus;
+    /// <summary>Set when the score was lowered for diagnoses that were not shared or ended in a poor decision.</summary>
     public string Penalty;
 }
 
@@ -40,8 +42,12 @@ public class ScoreBreakdown
 /// Each step earns 2 points for a right place and 1 for one place off. The step that judges the diagnosis order
 /// also loses 1 point for every diagnosis the cues do not support that takes a place belonging to a real one;
 /// a step never goes below 0. A step with nothing to judge is left out, so a cue the player never found is
-/// only counted once, in the first step. The overall score is the average of the steps.
-/// Handing over a diagnosis and its treatment without sharing them with the patient then halves that score.
+/// only counted once, in the first step. The overall score is the average of the steps, plus
+/// <see cref="ExtraCueBonus"/> points for every supporting cue ranked beyond what a solution diagnosis needed
+/// to unlock, capped at 100.
+/// Handing over a diagnosis and its treatment without discussing them with the patient then halves that score,
+/// and every diagnosis whose decision talk did not end in the recommended treatment costs
+/// <see cref="PoorDecisionPenalty"/> percentage points.
 /// If the patient leaves because their frustration reached the limit, the overall score is zero instead.
 /// </para>
 /// </summary>
@@ -49,11 +55,20 @@ public static class ScoreCalculator
 {
     const int RightPlacePoints = 2;
     const int OneOffPoints = 1;
+    /// <summary>Percentage points lost for each diagnosis that was decided without the patient agreeing to the recommended treatment.</summary>
+    public const int PoorDecisionPenalty = 10;
+    /// <summary>Percentage points gained for each supporting cue ranked beyond what a solution diagnosis needed to unlock.</summary>
+    public const int ExtraCueBonus = 2;
 
-    /// <summary>Scores the report. Halves the percentage when a diagnosis was not shared, unless the patient left, which scores zero.</summary>
-    /// <param name="unsharedDiagnoses">Titles of handed-over diagnoses that were not shared with the patient.</param>
+    /// <summary>
+    /// Scores the report. Halves the percentage when a diagnosis was not discussed and takes
+    /// <see cref="PoorDecisionPenalty"/> off for each poor decision, unless the patient left, which scores zero.
+    /// </summary>
+    /// <param name="unsharedDiagnoses">Titles of handed-over diagnoses that were never discussed with the patient.</param>
+    /// <param name="poorDecisions">Titles of handed-over diagnoses decided without the patient agreeing to the recommended treatment.</param>
     /// <param name="examinationFailed">True when the patient's frustration reached the limit and they left.</param>
-    public static ScoreBreakdown Calculate(HandoverReport report, IReadOnlyList<string> unsharedDiagnoses = null, bool examinationFailed = false)
+    public static ScoreBreakdown Calculate(HandoverReport report, IReadOnlyList<string> unsharedDiagnoses = null,
+        IReadOnlyList<string> poorDecisions = null, bool examinationFailed = false)
     {
         ScoreBreakdown score = new ScoreBreakdown();
         AddStep(score, RecogniseCues(report));
@@ -69,21 +84,58 @@ public static class ScoreCalculator
         float overall = score.Steps.Count > 0 ? total / score.Steps.Count : 0f;
         score.Percent = (int)Math.Round(overall * 100f, MidpointRounding.AwayFromZero);
         score.Level = LevelFor(overall);
+        AddExtraCueBonus(score, report);
 
         if (examinationFailed)
         {
             score.Percent = 0;
             score.Level = ScoreLevel.Beginning;
+            score.Bonus = null;
             score.Penalty = "The patient left before the examination was finished, so the examination failed.";
+            return score;
         }
-        else if (unsharedDiagnoses != null && unsharedDiagnoses.Count > 0)
+
+        List<string> penalties = new List<string>();
+        if (unsharedDiagnoses != null && unsharedDiagnoses.Count > 0)
         {
             score.Percent /= 2;
+            penalties.Add($"You handed over {JoinNames(unsharedDiagnoses)} without sharing the diagnosis and treatment with the patient, so the score was halved.");
+        }
+
+        if (poorDecisions != null && poorDecisions.Count > 0)
+        {
+            int lost = poorDecisions.Count * PoorDecisionPenalty;
+            score.Percent = Math.Max(0, score.Percent - lost);
+            penalties.Add($"The patient did not agree to the recommended treatment for {JoinNames(poorDecisions)}, which cost {lost} points.");
+        }
+
+        if (penalties.Count > 0)
+        {
             score.Level = LevelFor(score.Percent / 100f);
-            score.Penalty = $"You handed over {JoinNames(unsharedDiagnoses)} without sharing the diagnosis and treatment with the patient, so the score was halved.";
+            score.Penalty = string.Join(" ", penalties);
         }
 
         return score;
+    }
+
+    static void AddExtraCueBonus(ScoreBreakdown score, HandoverReport report)
+    {
+        int extra = 0;
+        foreach (DiagnosisPriorityRow row in report.Diagnoses)
+        {
+            extra += Math.Max(0, row.ExtraCues);
+        }
+
+        if (extra == 0 || score.Percent >= 100)
+        {
+            return;
+        }
+
+        int before = score.Percent;
+        score.Percent = Math.Min(100, score.Percent + extra * ExtraCueBonus);
+        score.Level = LevelFor(score.Percent / 100f);
+        string cues = extra == 1 ? "1 extra supporting cue" : $"{extra} extra supporting cues";
+        score.Bonus = $"You ranked {cues} beyond what your diagnoses needed, which added {score.Percent - before} points.";
     }
 
     static string JoinNames(IReadOnlyList<string> names)

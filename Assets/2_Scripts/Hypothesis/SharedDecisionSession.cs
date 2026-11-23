@@ -2,48 +2,57 @@ using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
-/// Rules for sharing one diagnosis at a time: goals, each treatment's pros and cons, then the
-/// decision. The interview screen shows the returned <see cref="SharePrompt"/>; this class does
-/// not build any UI. Frustration and the Shared flag match the previous share screen.
+/// Rules for shared decision making. The team talk plays once per patient when shared decision making
+/// starts. After that each diagnosis card runs its own options talk and decision talk. The interview screen
+/// shows the returned <see cref="SharePrompt"/>; this class does not build any UI.
+/// <para>
+/// In the decision talk the patient accepts the recommended treatment only while their frustration is at or
+/// below <see cref="ShareFrustration.CalmMax"/>; otherwise they refuse and it is taken off the list. Any other
+/// treatment is always accepted. Forcing applies the recommended treatment. Only an accepted recommended
+/// treatment counts as shared; every other decision is a poor decision. At <see cref="ShareFrustration.Max"/>
+/// the walkout lines play and the examination fails.
+/// </para>
 /// </summary>
 public sealed class SharedDecisionSession
 {
     enum Step
     {
         Idle,
-        Goals,
-        Treatments,
+        TeamTalk,
+        Options,
         Decision,
-        Pick,
         Walkout
     }
 
     readonly HashSet<string> sharedIds = new HashSet<string>(System.StringComparer.Ordinal);
     readonly HashSet<string> decidedIds = new HashSet<string>(System.StringComparer.Ordinal);
-    readonly HashSet<string> askedGoalIds = new HashSet<string>(System.StringComparer.Ordinal);
     readonly Dictionary<string, TreatmentOption> chosenTreatments = new Dictionary<string, TreatmentOption>(System.StringComparer.Ordinal);
-    readonly List<TreatmentOption> sessionTreatments = new List<TreatmentOption>();
-    readonly HashSet<int> discussed = new HashSet<int>();
+    // The choices currently on screen, so a clicked index maps back to what was offered
+    readonly List<ApproachTalk> approachChoices = new List<ApproachTalk>();
+    readonly List<TreatmentOption> treatmentChoices = new List<TreatmentOption>();
 
+    PatientSharedDecision script;
     Diagnosis active;
     string patientName;
     Step step = Step.Idle;
-    int currentTreatment;
     int frustration = ShareFrustration.Start;
-    bool decidingWithPatient;
+    bool teamTalkDone;
+    bool closed;
 
     public int Frustration => frustration;
     public bool HasLeft { get; private set; }
-    /// <summary>True from the first choice of a diagnosis until that decision is finished or cancelled.</summary>
+    /// <summary>True from the first choice of a talk until it is finished or cancelled.</summary>
     public bool IsInProgress => step != Step.Idle;
+    /// <summary>True while the team talk choices are waiting for an answer.</summary>
+    public bool IsInTeamTalk => step == Step.TeamTalk;
 
-    /// <summary>True when every treatment was discussed and the decision was made with the patient.</summary>
+    /// <summary>True when the patient agreed to the recommended treatment for this diagnosis.</summary>
     public bool IsShared(string diagnosisId)
     {
         return !string.IsNullOrEmpty(diagnosisId) && sharedIds.Contains(diagnosisId);
     }
 
-    /// <summary>True after this diagnosis has been through goals, options and the decision.</summary>
+    /// <summary>True after this diagnosis has been through the options and decision talk.</summary>
     public bool IsDecided(string diagnosisId)
     {
         return !string.IsNullOrEmpty(diagnosisId) && decidedIds.Contains(diagnosisId);
@@ -61,23 +70,25 @@ public sealed class SharedDecisionSession
         return chosen;
     }
 
-    /// <summary>Forgets every decision. Used when a new patient starts.</summary>
+    /// <summary>Forgets every decision and the team talk. Used when a new patient starts.</summary>
     public void Reset()
     {
         sharedIds.Clear();
         decidedIds.Clear();
-        askedGoalIds.Clear();
         chosenTreatments.Clear();
         ClearActive();
         frustration = ShareFrustration.Start;
         HasLeft = false;
+        teamTalkDone = false;
+        closed = false;
+        script = null;
         patientName = null;
     }
 
-    /// <summary>Drops the diagnosis currently being shared. Shared results and frustration stay.</summary>
+    /// <summary>Drops the diagnosis currently being discussed. The team talk, results and frustration stay.</summary>
     public void CancelTalk()
     {
-        if (HasLeft || step == Step.Walkout)
+        if (HasLeft || step == Step.Walkout || step == Step.TeamTalk)
         {
             return;
         }
@@ -86,55 +97,57 @@ public sealed class SharedDecisionSession
     }
 
     /// <summary>
-    /// Starts sharing <paramref name="diagnosis"/>. A diagnosis with no script returns a single line
-    /// and does not count as in progress. Returns null when a talk is already open or the patient has left.
+    /// Starts the team talk. Returns null, and lets diagnosis cards be discussed straight away, when it was
+    /// already played for this patient or none is written.
     /// </summary>
-    public SharePrompt Begin(Diagnosis diagnosis, string name)
+    public SharePrompt BeginTeamTalk(PatientSharedDecision patientScript, string name)
     {
         if (HasLeft || IsInProgress)
         {
             return null;
         }
 
+        script = patientScript;
         patientName = name;
-        if (diagnosis != null && IsDecided(diagnosis.id))
+        if (teamTalkDone || script == null || !script.HasTeamTalk)
+        {
+            teamTalkDone = true;
+            return null;
+        }
+
+        step = Step.TeamTalk;
+        SharePrompt prompt = Prompt();
+        AddLine(prompt, DialogueSpeaker.Narrator, $"Explain to {PatientName()} what is going on.");
+        OfferApproaches(prompt, script.teamTalk);
+        return prompt;
+    }
+
+    /// <summary>
+    /// Starts the options talk for <paramref name="diagnosis"/>. A diagnosis with no script returns a single
+    /// line and does not count as in progress. Returns null while another talk is open, before the team talk
+    /// is finished, for a decided diagnosis, or once the patient has left.
+    /// </summary>
+    public SharePrompt Begin(Diagnosis diagnosis, string name)
+    {
+        if (HasLeft || IsInProgress || !teamTalkDone || (diagnosis != null && IsDecided(diagnosis.id)))
         {
             return null;
         }
 
-        if (diagnosis == null || diagnosis.sharedDecision == null || !diagnosis.sharedDecision.HasScript)
+        patientName = name;
+        SharedDecisionTalk talk = diagnosis != null ? diagnosis.sharedDecision : null;
+        if (talk == null || !talk.HasScript)
         {
-            return Line("You", "No shared decision is written for this diagnosis yet.");
+            SharePrompt empty = Prompt();
+            empty.Lines.Add(new DialogueLine(DialogueSpeaker.Narrator, "No shared decision is written for this diagnosis yet."));
+            return empty;
         }
 
         active = diagnosis;
-        sessionTreatments.Clear();
-        discussed.Clear();
-        currentTreatment = 0;
-        foreach (TreatmentOption treatment in diagnosis.sharedDecision.treatments)
-        {
-            if (treatment != null && !string.IsNullOrWhiteSpace(treatment.title))
-            {
-                sessionTreatments.Add(treatment);
-            }
-        }
-
-        if (sessionTreatments.Count == 0)
-        {
-            active = null;
-            return Line("You", "No shared decision is written for this diagnosis yet.");
-        }
-
-        bool alreadyAsked = !string.IsNullOrEmpty(diagnosis.id) && askedGoalIds.Contains(diagnosis.id);
-        if (alreadyAsked)
-        {
-            step = Step.Treatments;
-            return TreatmentPrompt("You", "Discuss the pros and cons of each treatment, or skip them.", null);
-        }
-
-        step = Step.Goals;
-        SharePrompt prompt = Line("You", "Explain the diagnosis, then ask what matters to them.");
-        prompt.Choices.Add("Ask what matters to them.");
+        step = Step.Options;
+        SharePrompt prompt = Prompt();
+        AddLine(prompt, DialogueSpeaker.Patient, talk.patientOpener);
+        OfferApproaches(prompt, talk.optionsTalk);
         return prompt;
     }
 
@@ -143,14 +156,12 @@ public sealed class SharedDecisionSession
     {
         switch (step)
         {
-            case Step.Goals:
-                return AskGoals();
-            case Step.Treatments:
-                return AnswerTreatment(index);
+            case Step.TeamTalk:
+                return AnswerTeamTalk(index);
+            case Step.Options:
+                return AnswerOptions(index);
             case Step.Decision:
                 return AnswerDecision(index);
-            case Step.Pick:
-                return PickTreatment(index);
             case Step.Walkout:
                 return Leave();
             default:
@@ -158,90 +169,125 @@ public sealed class SharedDecisionSession
         }
     }
 
-    SharePrompt AskGoals()
+    /// <summary>
+    /// The nurse's last line and the patient's goodbye, chosen by frustration. Returns an empty list after the
+    /// first call, once the patient has left, or when no closing is written.
+    /// </summary>
+    public List<DialogueLine> Closing()
     {
-        string id = active != null ? active.id : null;
-        if (!string.IsNullOrEmpty(id) && askedGoalIds.Add(id))
+        List<DialogueLine> lines = new List<DialogueLine>();
+        if (closed || HasLeft || script == null)
         {
-            AddFrustration(ShareFrustration.AskGoals);
+            return lines;
         }
 
-        if (HasLeft)
-        {
-            return WalkoutPrompt();
-        }
-
-        string goals = active != null && active.sharedDecision != null ? active.sharedDecision.goalsAndFears : null;
-        string text = string.IsNullOrWhiteSpace(goals)
-            ? "They are not sure what else matters to them right now."
-            : goals;
-        currentTreatment = 0;
-        step = Step.Treatments;
-        return TreatmentPrompt(PatientName(), null, text);
+        closed = true;
+        AddLine(lines, DialogueSpeaker.Nurse, script.closingLine);
+        AddLine(lines, DialogueSpeaker.Patient, IsCalm ? script.calmGoodbye : script.frustratedGoodbye);
+        return lines;
     }
 
-    SharePrompt AnswerTreatment(int index)
+    SharePrompt AnswerTeamTalk(int index)
     {
-        if (index != 0 && index != 1)
+        ApproachTalk approach = ApproachAt(index);
+        if (approach == null)
         {
             return null;
         }
 
-        TreatmentOption treatment = sessionTreatments[currentTreatment];
-        if (index == 0)
+        SharePrompt prompt = Prompt();
+        AddApproachLines(prompt, approach);
+        teamTalkDone = true;
+        ClearActive();
+        if (AddFrustration(approach.frustrationChange))
         {
-            discussed.Add(currentTreatment);
-            return Advance(PatientName(), ProsConsPreface(treatment), "I understand the benefits and the drawbacks.");
+            return Walkout(prompt);
         }
 
-        if (AddFrustration(ShareFrustration.SkipProsCons))
+        prompt.Frustration = frustration;
+        return prompt;
+    }
+
+    SharePrompt AnswerOptions(int index)
+    {
+        ApproachTalk approach = ApproachAt(index);
+        if (approach == null)
         {
-            return WalkoutPrompt();
+            return null;
         }
 
-        return Advance(PatientName(), null, "You have not told me what this treatment would mean for me.");
+        SharePrompt prompt = Prompt();
+        AddApproachLines(prompt, approach);
+        if (AddFrustration(approach.frustrationChange))
+        {
+            return Walkout(prompt);
+        }
+
+        prompt.Frustration = frustration;
+        prompt.Lines.Add(new DialogueLine(DialogueSpeaker.Nurse, $"Ok {PatientName()}, let's decide on your treatment."));
+        treatmentChoices.Clear();
+        foreach (TreatmentOption treatment in active.sharedDecision.treatments)
+        {
+            if (treatment != null && !string.IsNullOrWhiteSpace(treatment.title))
+            {
+                treatmentChoices.Add(treatment);
+            }
+        }
+
+        step = Step.Decision;
+        OfferDecision(prompt);
+        return prompt;
     }
 
     SharePrompt AnswerDecision(int index)
     {
-        if (index != 0 && index != 1)
+        SharedDecisionTalk talk = active.sharedDecision;
+        if (index == treatmentChoices.Count && talk.forcedDecision != null && talk.forcedDecision.HasText)
+        {
+            return Force(talk);
+        }
+
+        if (index < 0 || index >= treatmentChoices.Count)
         {
             return null;
         }
 
-        decidingWithPatient = index == 0;
-        step = Step.Pick;
-        SharePrompt prompt = Line("You", decidingWithPatient
-            ? "Ask which treatment fits what matters to them."
-            : "Tell them which treatment they will have.");
-        for (int i = 0; i < sessionTreatments.Count; i++)
+        TreatmentOption treatment = treatmentChoices[index];
+        SharePrompt prompt = Prompt();
+        AddLine(prompt, DialogueSpeaker.Nurse, ProposalText(treatment));
+        bool calm = IsCalm;
+        AddLine(prompt, DialogueSpeaker.Patient, calm ? treatment.calmReply : treatment.frustratedReply);
+        if (treatment.recommended && !calm)
         {
-            prompt.Choices.Add(sessionTreatments[i].title);
+            treatmentChoices.RemoveAt(index);
+            OfferDecision(prompt);
+            if (prompt.Choices.Count == 0)
+            {
+                return Finish(prompt, null, false);
+            }
+
+            return prompt;
         }
 
-        return prompt;
+        return Finish(prompt, treatment, treatment.recommended);
     }
 
-    SharePrompt PickTreatment(int index)
+    SharePrompt Force(SharedDecisionTalk talk)
     {
-        if (index < 0 || index >= sessionTreatments.Count)
+        SharePrompt prompt = Prompt();
+        AddApproachLines(prompt, talk.forcedDecision);
+        if (AddFrustration(talk.forcedDecision.frustrationChange))
         {
-            return null;
+            return Walkout(prompt);
         }
 
-        TreatmentOption chosen = sessionTreatments[index];
-        if (!decidingWithPatient && AddFrustration(ShareFrustration.DecideAlone))
-        {
-            return WalkoutPrompt();
-        }
+        prompt.Frustration = frustration;
+        return Finish(prompt, talk.Recommended, false);
+    }
 
-        if (chosen != null && !chosen.patientWants && AddFrustration(ShareFrustration.UnwantedTreatment))
-        {
-            return WalkoutPrompt();
-        }
-
+    SharePrompt Finish(SharePrompt prompt, TreatmentOption chosen, bool shared)
+    {
         string id = active != null ? active.id : null;
-        bool shared = decidingWithPatient && discussed.Count >= sessionTreatments.Count;
         if (!string.IsNullOrEmpty(id))
         {
             chosenTreatments[id] = chosen;
@@ -256,17 +302,7 @@ public sealed class SharedDecisionSession
             }
         }
 
-        string title = chosen != null && !string.IsNullOrWhiteSpace(chosen.title) ? chosen.title : "the treatment";
-        bool withPatient = decidingWithPatient;
         ClearActive();
-        SharePrompt prompt = withPatient
-            ? Line(PatientName(), null)
-            : Line("You", $"You tell them they will have {title}.");
-        if (withPatient)
-        {
-            prompt.PatientLine = $"Let's go with {title}.";
-        }
-
         prompt.Finished = true;
         prompt.DiagnosisId = id;
         prompt.Shared = shared;
@@ -274,58 +310,118 @@ public sealed class SharedDecisionSession
         return prompt;
     }
 
-    SharePrompt Advance(string speaker, string dialogue, string patientLine)
+    /// <summary>Keeps the lines that pushed frustration over the limit, then adds the walkout lines and a Continue choice.</summary>
+    SharePrompt Walkout(SharePrompt prompt)
     {
-        if (currentTreatment + 1 < sessionTreatments.Count)
+        ClearActive();
+        step = Step.Walkout;
+        prompt.Frustration = frustration;
+        bool added = false;
+        if (script != null && script.walkoutLines != null)
         {
-            currentTreatment++;
-            step = Step.Treatments;
-            return TreatmentPrompt(speaker, dialogue, patientLine);
+            foreach (DialogueLine line in script.walkoutLines)
+            {
+                if (line != null && line.HasText)
+                {
+                    prompt.Lines.Add(line);
+                    added = true;
+                }
+            }
         }
 
-        step = Step.Decision;
-        SharePrompt prompt = Line(speaker, dialogue);
-        prompt.PatientLine = patientLine;
-        prompt.Choices.Add("Decide with the patient.");
-        prompt.Choices.Add("Decide yourself.");
-        return prompt;
-    }
+        if (!added)
+        {
+            prompt.Lines.Add(new DialogueLine(DialogueSpeaker.Patient, "I've had enough. I'm leaving."));
+        }
 
-    SharePrompt TreatmentPrompt(string speaker, string dialogue, string patientLine)
-    {
-        TreatmentOption treatment = sessionTreatments[currentTreatment];
-        string title = treatment != null ? treatment.title : "this treatment";
-        SharePrompt prompt = Line(speaker, dialogue);
-        prompt.PatientLine = patientLine;
-        prompt.Choices.Add($"Discuss the pros and cons of {title}.");
-        prompt.Choices.Add($"Skip the pros and cons of {title}.");
-        return prompt;
-    }
-
-    SharePrompt WalkoutPrompt()
-    {
-        step = Step.Walkout;
-        SharePrompt prompt = Line(PatientName(), null);
-        prompt.PatientLine = "I've had enough. I'm leaving.";
         prompt.Choices.Add("Continue");
         return prompt;
     }
 
     SharePrompt Leave()
     {
-        SharePrompt prompt = Line(PatientName(), null);
+        SharePrompt prompt = Prompt();
         prompt.Leave = true;
         return prompt;
     }
 
-    SharePrompt Line(string speaker, string dialogue)
+    void OfferApproaches(SharePrompt prompt, List<ApproachTalk> approaches)
     {
-        return new SharePrompt
+        approachChoices.Clear();
+        if (approaches == null)
         {
-            Speaker = speaker,
-            Dialogue = dialogue,
-            Frustration = frustration
-        };
+            return;
+        }
+
+        foreach (ApproachTalk approach in approaches)
+        {
+            if (approach != null && approach.HasText)
+            {
+                approachChoices.Add(approach);
+                prompt.Choices.Add(approach.nurseLine.Trim());
+            }
+        }
+    }
+
+    void OfferDecision(SharePrompt prompt)
+    {
+        foreach (TreatmentOption treatment in treatmentChoices)
+        {
+            prompt.Choices.Add(ProposalText(treatment));
+        }
+
+        ApproachTalk force = active != null ? active.sharedDecision.forcedDecision : null;
+        if (force != null && force.HasText)
+        {
+            prompt.Choices.Add(force.nurseLine.Trim());
+        }
+    }
+
+    ApproachTalk ApproachAt(int index)
+    {
+        return index >= 0 && index < approachChoices.Count ? approachChoices[index] : null;
+    }
+
+    static void AddApproachLines(SharePrompt prompt, ApproachTalk approach)
+    {
+        AddLine(prompt, DialogueSpeaker.Nurse, approach.nurseLine);
+        if (approach.replies == null)
+        {
+            return;
+        }
+
+        foreach (DialogueLine line in approach.replies)
+        {
+            if (line != null && line.HasText)
+            {
+                prompt.Lines.Add(line);
+            }
+        }
+    }
+
+    static void AddLine(SharePrompt prompt, DialogueSpeaker speaker, string text)
+    {
+        AddLine(prompt.Lines, speaker, text);
+    }
+
+    static void AddLine(List<DialogueLine> lines, DialogueSpeaker speaker, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            lines.Add(new DialogueLine(speaker, text.Trim()));
+        }
+    }
+
+    static string ProposalText(TreatmentOption treatment)
+    {
+        return string.IsNullOrWhiteSpace(treatment.proposal) ? $"Shall we go with {treatment.title}?" : treatment.proposal.Trim();
+    }
+
+    bool IsCalm => frustration <= ShareFrustration.CalmMax;
+
+    SharePrompt Prompt()
+    {
+        return new SharePrompt { Frustration = frustration };
     }
 
     /// <summary>Moves frustration. Returns true when the patient leaves.</summary>
@@ -350,49 +446,21 @@ public sealed class SharedDecisionSession
     {
         active = null;
         step = Step.Idle;
-        currentTreatment = 0;
-        decidingWithPatient = false;
-        sessionTreatments.Clear();
-        discussed.Clear();
+        approachChoices.Clear();
+        treatmentChoices.Clear();
     }
 
     string PatientName()
     {
         return string.IsNullOrWhiteSpace(patientName) ? "Patient" : patientName;
     }
-
-    static string ProsConsPreface(TreatmentOption treatment)
-    {
-        string pros = treatment != null ? treatment.pros : null;
-        string cons = treatment != null ? treatment.cons : null;
-        string text = string.Empty;
-        if (!string.IsNullOrWhiteSpace(pros))
-        {
-            text += $"Pros: {pros.Trim()}";
-        }
-
-        if (!string.IsNullOrWhiteSpace(cons))
-        {
-            if (text.Length > 0)
-            {
-                text += "\n";
-            }
-
-            text += $"Cons: {cons.Trim()}";
-        }
-
-        return text.Length == 0 ? null : text;
-    }
 }
 
 /// <summary>What the interview screen should show after one shared-decision step.</summary>
 public sealed class SharePrompt
 {
-    public string Speaker;
-    /// <summary>Shown at once. Nurse lines, or pros and cons kept on screen while the patient speaks.</summary>
-    public string Dialogue;
-    /// <summary>Typed with the patient's text speed and voice. Null when nobody is speaking.</summary>
-    public string PatientLine;
+    /// <summary>Played in order. A first nurse line is the choice the player just clicked.</summary>
+    public List<DialogueLine> Lines = new List<DialogueLine>();
     public List<string> Choices = new List<string>();
     public int Frustration;
     /// <summary>A treatment was chosen. The interview screen writes it onto the diagnosis card.</summary>

@@ -125,6 +125,13 @@ public class HandoverScreenUI : MonoBehaviour
         overall.AddToClassList("handover-score-overall");
         scoreBox.Add(overall);
 
+        if (!string.IsNullOrEmpty(score.Bonus))
+        {
+            Label bonus = new Label(score.Bonus);
+            bonus.AddToClassList("handover-score-bonus");
+            scoreBox.Add(bonus);
+        }
+
         if (!string.IsNullOrEmpty(score.Penalty))
         {
             Label penalty = new Label(score.Penalty);

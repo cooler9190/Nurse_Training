@@ -286,6 +286,15 @@
     flex-grow: 1;
 }
 
+.continue-hint {
+    position: absolute;
+    right: 90px;
+    bottom: 28px;
+    font-size: 15px;
+    -unity-font-style: italic;
+    color: rgba(255, 255, 255, 0.75);
+}
+
 .patient-folder {
     position: absolute;
     right: 0;

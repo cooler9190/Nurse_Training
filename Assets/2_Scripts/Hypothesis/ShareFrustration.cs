@@ -1,13 +1,12 @@
 /// <summary>
-/// How far the patient's frustration moves during shared decision making.
+/// Limits of the patient's frustration during shared decision making. How far each choice moves it is
+/// authored per choice on the patient asset (<see cref="ApproachTalk.frustrationChange"/>).
 /// The meter starts at <see cref="Start"/> and the examination fails at <see cref="Max"/>.
 /// </summary>
 public static class ShareFrustration
 {
     public const int Start = 20;
     public const int Max = 100;
-    public const int AskGoals = -15;
-    public const int SkipProsCons = 20;
-    public const int DecideAlone = 25;
-    public const int UnwantedTreatment = 20;
+    /// <summary>At or below this the patient is calm enough to accept the recommended treatment.</summary>
+    public const int CalmMax = 45;
 }

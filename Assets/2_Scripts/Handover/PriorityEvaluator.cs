@@ -25,6 +25,8 @@ public class DiagnosisPriorityRow
     public int Yours;
     public PriorityVerdict Verdict;
     public string Reason;
+    /// <summary>Supporting cues the player ranked beyond what unlocking the diagnosis needed. 0 when it did not unlock.</summary>
+    public int ExtraCues;
 }
 
 /// <summary>One line of the cue comparison.</summary>
@@ -136,6 +138,7 @@ public static class PriorityEvaluator
         }
 
         int[] yours = new int[solutionCount];
+        int[] extraCues = new int[solutionCount];
         for (int i = 0; i < player.Count; i++)
         {
             Diagnosis diagnosis = player[i].Diagnosis;
@@ -144,6 +147,7 @@ public static class PriorityEvaluator
                 if (yours[solutionIndex] == 0)
                 {
                     yours[solutionIndex] = i + 1;
+                    extraCues[solutionIndex] = player[i].ExtraCueCount;
                 }
 
                 continue;
@@ -184,7 +188,8 @@ public static class PriorityEvaluator
                 Expected = i + 1,
                 Yours = yours[i],
                 Verdict = verdict,
-                Reason = diagnosis?.priorityReason
+                Reason = diagnosis?.priorityReason,
+                ExtraCues = extraCues[i]
             });
         }
 
