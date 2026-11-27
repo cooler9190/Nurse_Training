@@ -4,9 +4,9 @@ using UnityEngine;
 
 /// <summary>
 /// Plays a night shift without changing the interview. The shift clock runs in real time from the start time to
-/// the end time of <see cref="SO_NightShift"/> (see <see cref="NightShiftProgress"/>). While the player is on the
-/// ward map it shows the bell calls; a call can be attended once the clock reaches its time. Attending a call hides
-/// the map and starts that call's patient with <see cref="Patient.Begin"/>, the same way clicking a room does.
+/// the end time of <see cref="SO_NightShift"/> (see <see cref="NightShiftProgress"/>). When the clock reaches a
+/// call's time its room starts blinking, and the player attends it by clicking the room (see
+/// <see cref="HospitalRoomPicker"/>). Calls are not announced beforehand.
 /// A call is done when the player hands the patient over (<see cref="HandoverFlow.OnHandedOver"/>), which records
 /// the score. The summary shows when every call is done, or when the clock reaches the end of the shift: an
 /// interview still running is ended and calls that were not done count as 0%.
@@ -19,16 +19,14 @@ public class NightShiftFlow : MonoBehaviour
     [SerializeField] PatientInterviewController controller;
     [SerializeField] HandoverFlow handover;
     [SerializeField] NightShiftScreenUI screen;
-    [Tooltip("The hospital map, hidden while a patient is being examined. The room picker brings it back.")]
+    [Tooltip("The hospital map, brought back when an interview ends.")]
     [SerializeField] GameObject hospitalRoot;
 
     NightShiftProgress progress;
     PatientRoom[] rooms = new PatientRoom[0];
     PatientRoom[] callRooms = new PatientRoom[0];
     bool[] announced = new bool[0];
-    int current = -1;
-    int lastRinging;
-    bool callsShowing;
+    bool onMap;
     bool summaryPending;
     bool timeUpHandled;
 
@@ -53,9 +51,8 @@ public class NightShiftFlow : MonoBehaviour
         if (handover != null) { handover.OnHandedOver += HandleHandedOver; }
         if (screen != null)
         {
-            screen.OnCallClicked += StartCall;
             screen.OnRestartClicked += Restart;
-            screen.OnSummaryClosed += ShowCalls;
+            screen.OnSummaryClosed += ShowMap;
         }
     }
 
@@ -70,9 +67,8 @@ public class NightShiftFlow : MonoBehaviour
         if (handover != null) { handover.OnHandedOver -= HandleHandedOver; }
         if (screen != null)
         {
-            screen.OnCallClicked -= StartCall;
             screen.OnRestartClicked -= Restart;
-            screen.OnSummaryClosed -= ShowCalls;
+            screen.OnSummaryClosed -= ShowMap;
         }
     }
 
@@ -80,11 +76,11 @@ public class NightShiftFlow : MonoBehaviour
     {
         if (controller == null || !controller.IsPlaying)
         {
-            ShowCalls();
+            ShowMap();
         }
         else if (screen != null && progress != null)
         {
-            screen.SetClockBarVisible(true);
+            screen.ShowInterviewClock();
         }
     }
 
@@ -105,14 +101,6 @@ public class NightShiftFlow : MonoBehaviour
         progress.Tick(delta);
         screen.SetClock(progress.Clock, progress.Elapsed01);
         AnnounceCalls();
-
-        // A call that has just started ringing needs the list to be rebuilt
-        int ringing = progress.RingingCount;
-        if (ringing != lastRinging)
-        {
-            lastRinging = ringing;
-            if (callsShowing) { ShowCalls(); }
-        }
 
         if (progress.IsOver && !timeUpHandled)
         {
@@ -177,7 +165,7 @@ public class NightShiftFlow : MonoBehaviour
     // True when the player is on the map, no call is waiting for them and there is still a call to come
     bool IsIdle()
     {
-        if (!callsShowing || progress.IsOver)
+        if (!onMap || progress.IsOver)
         {
             return false;
         }
@@ -235,34 +223,6 @@ public class NightShiftFlow : MonoBehaviour
         }
     }
 
-    void StartCall(int index)
-    {
-        if (progress == null || patient == null || progress.IsOver || index < 0 || index >= shift.calls.Count || !progress.IsRinging(index) || progress.IsDone(index))
-        {
-            return;
-        }
-
-        NightCall call = shift.calls[index];
-        if (call == null || call.patient == null || (controller != null && controller.IsPlaying))
-        {
-            return;
-        }
-
-        current = index;
-        if (hospitalRoot != null) { hospitalRoot.SetActive(false); }
-        callsShowing = false;
-        screen.Hide();
-        patient.Begin(call.patient);
-
-        // Begin can fail (missing asset or UI), so don't leave the player on an empty screen
-        if (controller != null && !controller.IsPlaying)
-        {
-            if (hospitalRoot != null) { hospitalRoot.SetActive(true); }
-            current = -1;
-            ShowCalls();
-        }
-    }
-
     void HandleHandedOver(SO_Patient profile, ScoreBreakdown score)
     {
         int index = IndexOf(profile);
@@ -276,25 +236,21 @@ public class NightShiftFlow : MonoBehaviour
         summaryPending = progress.IsComplete;
     }
 
-    // Covers an interview started from a room on the map, not only from a call
     void HandleInterviewStarted()
     {
-        callsShowing = false;
+        onMap = false;
 
         // The nurse is in the room now, so it stops blinking
         StopRoomCall(IndexOf(patient != null ? patient.Profile : null));
         if (screen != null)
         {
-            screen.Hide();
-            screen.SetClockBarVisible(true);
+            screen.ShowInterviewClock();
         }
     }
 
     void HandleInterviewEnded()
     {
-        current = -1;
         if (hospitalRoot != null) { hospitalRoot.SetActive(true); }
-        if (screen != null) { screen.SetClockBarVisible(false); }
         if (summaryPending || (progress != null && progress.IsOver))
         {
             summaryPending = false;
@@ -312,7 +268,7 @@ public class NightShiftFlow : MonoBehaviour
                 }
             }
 
-            ShowCalls();
+            ShowMap();
         }
     }
 
@@ -341,22 +297,21 @@ public class NightShiftFlow : MonoBehaviour
         progress.Reset();
         StopAllRoomCalls();
         announced = new bool[announced.Length];
-        lastRinging = 0;
         summaryPending = false;
         timeUpHandled = false;
-        ShowCalls();
+        ShowMap();
     }
 
-    void ShowCalls()
+    void ShowMap()
     {
         if (progress == null || screen == null)
         {
             return;
         }
 
-        callsShowing = true;
-        screen.SetClockBarVisible(false);
-        screen.ShowCalls(shift.shiftName, progress.Clock, BuildCards());
+        onMap = true;
+        screen.SetClock(progress.Clock, progress.Elapsed01);
+        screen.ShowMapClock();
     }
 
     void ShowSummary()
@@ -366,8 +321,7 @@ public class NightShiftFlow : MonoBehaviour
             return;
         }
 
-        callsShowing = false;
-        screen.SetClockBarVisible(false);
+        onMap = false;
         screen.ShowSummary(shift.shiftName, progress.AveragePercent, progress.AverageLevel, BuildCards(), progress.IsOver);
     }
 
@@ -383,9 +337,7 @@ public class NightShiftFlow : MonoBehaviour
                 Bed = call != null ? call.bed : string.Empty,
                 Hint = call != null && !string.IsNullOrWhiteSpace(call.hint) ? call.hint : "The call bell is ringing.",
                 PatientName = call != null && call.patient != null ? call.patient.patientDisplayName : string.Empty,
-                Ringing = progress.IsRinging(i),
                 Done = progress.IsDone(i),
-                Missed = progress.IsMissed(i),
                 Percent = progress.Percent(i),
                 Level = progress.Level(i)
             });
@@ -394,17 +346,11 @@ public class NightShiftFlow : MonoBehaviour
         return cards;
     }
 
-    // Prefers the call being attended, in case the same patient appears twice
     int IndexOf(SO_Patient profile)
     {
         if (shift == null || profile == null)
         {
             return -1;
-        }
-
-        if (current >= 0 && current < shift.calls.Count && shift.calls[current] != null && shift.calls[current].patient == profile)
-        {
-            return current;
         }
 
         for (int i = 0; i < shift.calls.Count; i++)

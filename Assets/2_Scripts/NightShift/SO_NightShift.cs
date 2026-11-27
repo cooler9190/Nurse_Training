@@ -55,7 +55,7 @@ public class NightCall
     [Tooltip("The room on the map that blinks while this call rings, for example \"Room 2\". It matches part of the room's name. Leave empty to use the room that holds this patient. The room shows this call's patient while it rings.")]
     public string room;
     [TextArea(1, 3)]
-    [Tooltip("What the nurse hears when the bell rings. Keep it to what a person on the ward could notice, not the diagnosis.")]
+    [Tooltip("What the nurse hears when the bell rings, shown in the end-of-shift summary. Keep it to what a person on the ward could notice, not the diagnosis.")]
     public string hint;
     public SO_Patient patient;
 }

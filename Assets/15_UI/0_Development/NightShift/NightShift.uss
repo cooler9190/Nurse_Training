@@ -6,44 +6,6 @@
     bottom: 0;
 }
 
-/* Right-hand side of the ward map, so the rooms stay visible and clickable */
-.nightshift-panel {
-    position: absolute;
-    top: 24px;
-    right: 24px;
-    width: 340px;
-    max-height: 90%;
-    padding: 14px;
-    background-color: rgba(12, 30, 42, 0.94);
-    border-radius: 8px;
-    border-width: 2px;
-    border-color: rgb(122, 168, 186);
-    display: none;
-}
-
-.nightshift-title {
-    color: rgb(232, 244, 248);
-    font-size: 20px;
-    -unity-font-style: bold;
-}
-
-.nightshift-clock {
-    color: rgb(240, 200, 96);
-    font-size: 40px;
-    -unity-font-style: bold;
-    margin-top: 2px;
-}
-
-.nightshift-progress {
-    color: rgb(170, 200, 212);
-    font-size: 13px;
-    margin-bottom: 10px;
-}
-
-.nightshift-calls {
-    flex-shrink: 1;
-}
-
 .nightshift-call {
     margin-bottom: 10px;
     padding: 10px 12px;
@@ -166,12 +128,12 @@
     margin-left: 10px;
 }
 
-/* The small clock shown beside the Hand over button while a patient is being examined */
+/* The ward clock. Beside the Hand over button while a patient is being examined */
 .nightshift-clockbar {
     position: absolute;
     top: 24px;
     left: 50%;
-    margin-left: 110px;
+    margin-left: 330px;
     width: 130px;
     padding: 4px 10px 8px 10px;
     background-color: rgba(12, 30, 42, 0.94);
@@ -179,6 +141,13 @@
     border-width: 1px;
     border-color: rgb(122, 168, 186);
     display: none;
+}
+
+/* On the ward map it sits in the top right corner, clear of the rooms */
+.nightshift-clockbar--map {
+    left: auto;
+    right: 24px;
+    margin-left: 0;
 }
 
 .nightshift-clockbar-time {
@@ -203,11 +172,6 @@
 
 .nightshift-clockbar-fill--late {
     background-color: rgb(214, 80, 70);
-}
-
-.nightshift-call--waiting {
-    background-color: rgb(196, 208, 214);
-    border-color: rgb(120, 130, 140);
 }
 
 .nightshift-call-result--missed {

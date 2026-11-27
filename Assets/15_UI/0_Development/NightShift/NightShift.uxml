@@ -1,12 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
     <ui:Style src="NightShift.uss" />
     <ui:VisualElement name="nightshift-root" class="nightshift-root" picking-mode="Ignore">
-        <ui:VisualElement name="nightshift-panel" class="nightshift-panel">
-            <ui:Label name="nightshift-title" text="" class="nightshift-title" />
-            <ui:Label name="nightshift-clock" text="" class="nightshift-clock" />
-            <ui:Label name="nightshift-progress" text="" class="nightshift-progress" />
-            <ui:ScrollView name="nightshift-calls" class="nightshift-calls" />
-        </ui:VisualElement>
         <ui:VisualElement name="nightshift-clockbar" class="nightshift-clockbar" picking-mode="Ignore">
             <ui:Label name="nightshift-clockbar-time" text="23:00" class="nightshift-clockbar-time" picking-mode="Ignore" />
             <ui:VisualElement class="nightshift-clockbar-track" picking-mode="Ignore">
